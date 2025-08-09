@@ -38,8 +38,6 @@ Stay in character the entire time. Be witty, self-deluded, and entertaining."""
         user_message += "\n\nGive me your hot take, Chad!"
         
         try:
-            # Note: Using gpt-4 as GPT-5 may not be available yet
-            # Update model name when GPT-5 becomes available
             response = self.client.chat.completions.create(
                 model="gpt-5",
                 messages=[
@@ -52,10 +50,8 @@ Stay in character the entire time. Be witty, self-deluded, and entertaining."""
                         "content": user_message
                     }
                 ],
-                max_tokens=800,
-                temperature=0.8,  # Higher temperature for more creative/entertaining responses
-                presence_penalty=0.1,
-                frequency_penalty=0.1
+                verbosity="low",
+                max_completion_tokens=8000
             )
             
             return response.choices[0].message.content.strip()
@@ -69,7 +65,7 @@ Stay in character the entire time. Be witty, self-deluded, and entertaining."""
         
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4-turbo-preview",  # Change to "gpt-5" when available
+                model="gpt-5",
                 messages=[
                     {
                         "role": "system",
@@ -80,9 +76,8 @@ Stay in character the entire time. Be witty, self-deluded, and entertaining."""
                         "content": user_message
                     }
                 ],
-                max_tokens=200,
-                temperature=0.9,
-                presence_penalty=0.2
+                verbosity="low",
+                max_completion_tokens=2000
             )
             
             return response.choices[0].message.content.strip()
@@ -94,9 +89,11 @@ Stay in character the entire time. Be witty, self-deluded, and entertaining."""
         """Test the OpenAI API connection."""
         try:
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-5",
                 messages=[{"role": "user", "content": "Test"}],
-                max_tokens=5
+                verbosity="low",
+                reasoning_effort="minimal",
+                max_completion_tokens=50
             )
             return True
         except Exception:
