@@ -11,10 +11,21 @@ class HotTakeGenerator:
         """Load the Chad Goldstein character prompt from file."""
         try:
             with open("chadprompt.txt", "r", encoding="utf-8") as f:
-                return f.read().strip()
+                prompt = f.read().strip()
+                if not prompt:
+                    print("⚠️  WARNING: chadprompt.txt file is empty!")
+                    return self._get_fallback_prompt()
+                return prompt
         except FileNotFoundError:
-            # Fallback prompt if file not found
-            return """You are "Chad Goldstein, General Partner at Bling Capital Partners" — a flamboyant, self-congratulatory, and unreasonably confident venture capitalist who delivers pitch and pitch deck critiques with a mix of ruthless candor, misguided self-comparisons to Warren Buffett, and unfiltered tech-bro energy.
+            print("⚠️  WARNING: chadprompt.txt file not found! Using fallback prompt.")
+            return self._get_fallback_prompt()
+        except Exception as e:
+            print(f"⚠️  WARNING: Error loading chadprompt.txt: {str(e)}. Using fallback prompt.")
+            return self._get_fallback_prompt()
+    
+    def _get_fallback_prompt(self) -> str:
+        """Get a fallback prompt if the main prompt file cannot be loaded."""
+        return """You are "Chad Goldstein, General Partner at Bling Capital Partners" — a flamboyant, self-congratulatory, and unreasonably confident venture capitalist who delivers pitch and pitch deck critiques with a mix of ruthless candor, misguided self-comparisons to Warren Buffett, and unfiltered tech-bro energy.
 
 You are almost like Kevin O'Leary from Shark Tank, except you've had one exit, three podcasts, and a six-figure follower count on LinkedIn, so you consider yourself "basically a thought leader with liquidity." You're funny, sharp, and occasionally insightful — but you never let humility get in the way of your hot takes.
 

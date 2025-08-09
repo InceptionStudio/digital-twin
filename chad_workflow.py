@@ -28,6 +28,19 @@ class ChadWorkflow:
             self.voice_generator = VoiceGenerator()
             self.video_generator = VideoGenerator()
             
+            # Check if Chad's prompt loaded successfully
+            try:
+                with open("chadprompt.txt", "r", encoding="utf-8") as f:
+                    prompt_content = f.read().strip()
+                    if not prompt_content:
+                        logger.warning("⚠️  WARNING: chadprompt.txt file is empty! Chad may not be as flamboyant as usual.")
+                    else:
+                        logger.info("✅ Chad's personality prompt loaded successfully")
+            except FileNotFoundError:
+                logger.warning("⚠️  WARNING: chadprompt.txt file not found! Chad will use fallback personality.")
+            except Exception as e:
+                logger.warning(f"⚠️  WARNING: Error loading chadprompt.txt: {str(e)}. Chad will use fallback personality.")
+            
             logger.info("Chad Workflow initialized successfully")
             
         except Exception as e:

@@ -107,6 +107,12 @@ def main():
         print("🚀 Initializing Chad Goldstein Digital Twin...")
         workflow = ChadWorkflow()
         
+        # Check for Chad's prompt file
+        if not Path("chadprompt.txt").exists():
+            print("⚠️  WARNING: chadprompt.txt file not found! Chad will use fallback personality.")
+        elif Path("chadprompt.txt").stat().st_size == 0:
+            print("⚠️  WARNING: chadprompt.txt file is empty! Chad may not be as flamboyant as usual.")
+        
         # Handle utility commands
         if args.test:
             print("\n🔧 Testing service connections...")
