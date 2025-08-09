@@ -1,5 +1,6 @@
 import openai
-from typing import Optional
+import time
+from typing import Optional, Dict, Any
 from config import Config
 
 class HotTakeGenerator:
@@ -37,7 +38,7 @@ Format your response like an investor-style commentary:
 
 Stay in character the entire time. Be witty, self-deluded, and entertaining."""
     
-    def generate_hot_take(self, pitch_transcript: str, context: Optional[str] = None) -> str:
+    def generate_hot_take(self, pitch_transcript: str, context: Optional[str] = None) -> Dict[str, Any]:
         """Generate a hot take response based on the pitch transcript."""
         
         # Construct the user message
@@ -47,6 +48,8 @@ Stay in character the entire time. Be witty, self-deluded, and entertaining."""
             user_message += f"\n\nAdditional context: {context}"
         
         user_message += "\n\nGive me your hot take, Chad!"
+        
+        start_time = time.time()
         
         try:
             response = self.client.chat.completions.create(
@@ -65,14 +68,37 @@ Stay in character the entire time. Be witty, self-deluded, and entertaining."""
                 max_completion_tokens=8000
             )
             
-            return response.choices[0].message.content.strip()
+            end_time = time.time()
+            latency = end_time - start_time
+            
+            result = {
+                "hot_take": response.choices[0].message.content.strip(),
+                "latency_seconds": latency,
+                "input_tokens": response.usage.prompt_tokens if response.usage else None,
+                "output_tokens": response.usage.completion_tokens if response.usage else None,
+                "total_tokens": response.usage.total_tokens if response.usage else None,
+                "model": response.model,
+                "finish_reason": response.choices[0].finish_reason if response.choices else None
+            }
+            
+            # Log latency information
+            print(f"⏱️  OpenAI API Latency: {latency:.2f}s")
+            if response.usage:
+                print(f"📊 Tokens: {result['input_tokens']} input, {result['output_tokens']} output, {result['total_tokens']} total")
+            
+            return result
             
         except Exception as e:
+            end_time = time.time()
+            latency = end_time - start_time
+            print(f"❌ OpenAI API Error after {latency:.2f}s: {str(e)}")
             raise Exception(f"Failed to generate hot take: {str(e)}")
     
-    def generate_quick_roast(self, topic: str) -> str:
+    def generate_quick_roast(self, topic: str) -> Dict[str, Any]:
         """Generate a quick roast on any topic."""
         user_message = f"Give me a quick hot take roast about: {topic}"
+        
+        start_time = time.time()
         
         try:
             response = self.client.chat.completions.create(
@@ -91,13 +117,35 @@ Stay in character the entire time. Be witty, self-deluded, and entertaining."""
                 max_completion_tokens=2000
             )
             
-            return response.choices[0].message.content.strip()
+            end_time = time.time()
+            latency = end_time - start_time
+            
+            result = {
+                "roast": response.choices[0].message.content.strip(),
+                "latency_seconds": latency,
+                "input_tokens": response.usage.prompt_tokens if response.usage else None,
+                "output_tokens": response.usage.completion_tokens if response.usage else None,
+                "total_tokens": response.usage.total_tokens if response.usage else None,
+                "model": response.model,
+                "finish_reason": response.choices[0].finish_reason if response.choices else None
+            }
+            
+            # Log latency information
+            print(f"⏱️  OpenAI API Latency (Quick Roast): {latency:.2f}s")
+            if response.usage:
+                print(f"📊 Tokens: {result['input_tokens']} input, {result['output_tokens']} output, {result['total_tokens']} total")
+            
+            return result
             
         except Exception as e:
+            end_time = time.time()
+            latency = end_time - start_time
+            print(f"❌ OpenAI API Error after {latency:.2f}s: {str(e)}")
             raise Exception(f"Failed to generate quick roast: {str(e)}")
     
     def test_connection(self) -> bool:
         """Test the OpenAI API connection."""
+        start_time = time.time()
         try:
             response = self.client.chat.completions.create(
                 model="gpt-5",
@@ -106,6 +154,12 @@ Stay in character the entire time. Be witty, self-deluded, and entertaining."""
                 reasoning_effort="minimal",
                 max_completion_tokens=50
             )
+            end_time = time.time()
+            latency = end_time - start_time
+            print(f"⏱️  OpenAI Connection Test Latency: {latency:.2f}s")
             return True
-        except Exception:
+        except Exception as e:
+            end_time = time.time()
+            latency = end_time - start_time
+            print(f"❌ OpenAI Connection Test Failed after {latency:.2f}s: {str(e)}")
             return False

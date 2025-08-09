@@ -180,9 +180,11 @@ def main():
             if "transcript" in results:
                 print(f"📄 Transcript: {len(results['transcript'])} characters")
             print(f"💬 Hot Take: {len(results.get('hot_take', results.get('roast', '')))} characters")
+            if 'openai_latency' in results:
+                print(f"⏱️  OpenAI API: {results['openai_latency']:.2f}s ({results.get('openai_tokens', 'N/A')} tokens)")
             print(f"🎵 Audio: {results['audio_path']}")
             print(f"🎥 Video: {results['video_path']}")
-            print(f"⏱️  Processing time: {results['processing_time']:.2f} seconds")
+            print(f"⏱️  Total processing time: {results['processing_time']:.2f} seconds")
             
             # Show hot take preview
             hot_take_text = results.get('hot_take', results.get('roast', ''))

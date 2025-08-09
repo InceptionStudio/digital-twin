@@ -80,9 +80,11 @@ class ChadWorkflow:
             
             # Step 2: Generate hot take
             logger.info("Step 2: Generating hot take...")
-            hot_take = self.hot_take_generator.generate_hot_take(transcript, context)
-            results["hot_take"] = hot_take
-            logger.info(f"Hot take generated: {len(hot_take)} characters")
+            hot_take_result = self.hot_take_generator.generate_hot_take(transcript, context)
+            results["hot_take"] = hot_take_result["hot_take"]
+            results["openai_latency"] = hot_take_result["latency_seconds"]
+            results["openai_tokens"] = hot_take_result["total_tokens"]
+            logger.info(f"Hot take generated: {len(hot_take_result['hot_take'])} characters in {hot_take_result['latency_seconds']:.2f}s")
             
             # Step 3: Generate voice
             logger.info("Step 3: Generating voice...")
@@ -91,7 +93,7 @@ class ChadWorkflow:
             
             audio_filename = f"{output_filename}.mp3"
             audio_path = self.voice_generator.generate_speech(
-                hot_take, 
+                hot_take_result["hot_take"], 
                 audio_filename, 
                 voice_settings
             )
@@ -150,9 +152,11 @@ class ChadWorkflow:
         try:
             # Step 1: Generate hot take
             logger.info("Step 1: Generating hot take from text...")
-            hot_take = self.hot_take_generator.generate_hot_take(text, context)
-            results["hot_take"] = hot_take
-            logger.info(f"Hot take generated: {len(hot_take)} characters")
+            hot_take_result = self.hot_take_generator.generate_hot_take(text, context)
+            results["hot_take"] = hot_take_result["hot_take"]
+            results["openai_latency"] = hot_take_result["latency_seconds"]
+            results["openai_tokens"] = hot_take_result["total_tokens"]
+            logger.info(f"Hot take generated: {len(hot_take_result['hot_take'])} characters in {hot_take_result['latency_seconds']:.2f}s")
             
             # Step 2: Generate voice
             logger.info("Step 2: Generating voice...")
@@ -161,7 +165,7 @@ class ChadWorkflow:
             
             audio_filename = f"{output_filename}.mp3"
             audio_path = self.voice_generator.generate_speech(
-                hot_take, 
+                hot_take_result["hot_take"], 
                 audio_filename, 
                 voice_settings
             )
@@ -216,9 +220,11 @@ class ChadWorkflow:
         try:
             # Step 1: Generate quick roast
             logger.info(f"Step 1: Generating quick roast for: {topic}")
-            roast = self.hot_take_generator.generate_quick_roast(topic)
-            results["roast"] = roast
-            logger.info(f"Quick roast generated: {len(roast)} characters")
+            roast_result = self.hot_take_generator.generate_quick_roast(topic)
+            results["roast"] = roast_result["roast"]
+            results["openai_latency"] = roast_result["latency_seconds"]
+            results["openai_tokens"] = roast_result["total_tokens"]
+            logger.info(f"Quick roast generated: {len(roast_result['roast'])} characters in {roast_result['latency_seconds']:.2f}s")
             
             # Step 2: Generate voice (faster streaming version)
             logger.info("Step 2: Generating voice (streaming)...")
