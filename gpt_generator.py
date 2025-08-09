@@ -65,7 +65,8 @@ Stay in character the entire time. Be witty, self-deluded, and entertaining."""
                     }
                 ],
                 verbosity="low",
-                max_completion_tokens=8000
+                #max_completion_tokens=8000,
+                service_tier="priority"
             )
             
             end_time = time.time()
@@ -114,7 +115,8 @@ Stay in character the entire time. Be witty, self-deluded, and entertaining."""
                     }
                 ],
                 verbosity="low",
-                max_completion_tokens=2000
+                #max_completion_tokens=2000,
+                service_tier="priority"
             )
             
             end_time = time.time()
@@ -152,7 +154,8 @@ Stay in character the entire time. Be witty, self-deluded, and entertaining."""
                 messages=[{"role": "user", "content": "Test"}],
                 verbosity="low",
                 reasoning_effort="minimal",
-                max_completion_tokens=50
+                max_completion_tokens=50,
+                service_tier="priority"
             )
             end_time = time.time()
             latency = end_time - start_time

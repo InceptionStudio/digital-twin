@@ -232,7 +232,7 @@ class ChadWorkflow:
                 output_filename = f"chad_roast_{int(start_time)}"
             
             audio_filename = f"{output_filename}.mp3"
-            audio_path = self.voice_generator.generate_speech_streaming(roast, audio_filename)
+            audio_path = self.voice_generator.generate_speech_streaming(roast_result["roast"], audio_filename)
             results["audio_path"] = audio_path
             logger.info(f"Audio generated: {audio_path}")
             
