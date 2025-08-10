@@ -1,80 +1,70 @@
-# Docker Setup for Digital Twin Application
+# Docker Setup for Digital Twin Web API
 
 ## Prerequisites
-- Docker and Docker Compose installed on your system
+- Docker and Docker Compose installed
 - API keys for OpenAI, ElevenLabs, and HeyGen services
 
 ## Quick Start
 
-1. **Copy and configure environment variables:**
+1. **Setup environment variables:**
    ```bash
    cp .env.example .env
    ```
    Edit `.env` and add your API keys.
 
-2. **Build and run the application:**
+2. **Start the web API:**
    ```bash
-   docker-compose up --build
+   docker compose up --build
    ```
-   The web API will be available at http://localhost:8000
+   The API will be available at http://localhost:8000
 
-3. **Access the API documentation:**
-   Visit http://localhost:8000/docs for the Swagger UI
+3. **View API documentation:**
+   - Swagger UI: http://localhost:8000/docs
+   - ReDoc: http://localhost:8000/redoc
 
-## Available Services
+## Docker Commands
 
-### Web API Service (Default)
-Runs the FastAPI web server:
 ```bash
-docker-compose up
+# Start the service
+docker compose up
+
+# Start in background
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# Stop the service
+docker compose down
+
+# Rebuild after code changes
+docker compose build
+
+# Restart the service
+docker compose restart
 ```
 
-### CLI Service
-Run the CLI interface in Docker:
-```bash
-docker-compose --profile cli run --rm digital-twin-cli
-```
+## API Endpoints
 
-Or for specific CLI commands:
-```bash
-# Generate content
-docker-compose run --rm digital-twin-cli python cli.py generate --topic "Your topic"
-
-# Manage personas
-docker-compose run --rm digital-twin-cli python persona_cli.py list
-
-# Run Chad workflow
-docker-compose run --rm digital-twin-cli python chad_workflow.py --input-file audio.mp3
-```
+The web API provides the following endpoints:
+- `POST /generate` - Generate content from a topic
+- `POST /process_audio` - Process audio file
+- `POST /chad_workflow` - Run the complete Chad workflow
+- Various workflow step endpoints
 
 ## Volume Mounts
 
-The following directories are mounted as volumes:
+The following directories are mounted:
 - `./temp` - Temporary files during processing
-- `./output` - Generated output files
-- `./personas` - Persona configurations and prompts
+- `./output` - Generated output files  
+- `./personas` - Persona configurations
 
-## Common Commands
+## Health Check
 
-```bash
-# Start services in background
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
-
-# Rebuild after code changes
-docker-compose build
-
-# Clean up volumes and containers
-docker-compose down -v
-```
+The service includes a health check endpoint at `/health` that Docker uses to monitor the container status.
 
 ## Troubleshooting
 
-- If you encounter permission issues with volumes, ensure the `temp` and `output` directories exist and have proper permissions
-- For GPU support (PyTorch), you may need to modify the Dockerfile to use CUDA base image
-- Check logs with `docker-compose logs` if services fail to start
+- Ensure all required API keys are set in `.env`
+- Check logs with `docker compose logs` if the service fails
+- Verify ports are not already in use (default: 8000)
