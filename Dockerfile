@@ -23,14 +23,17 @@ RUN if [ -f requirements-docker.txt ]; then \
         pip install --no-cache-dir -r requirements.txt; \
     fi
 
+# Install debugpy for debugging support
+RUN pip install --no-cache-dir debugpy watchdog
+
 # Copy application code
 COPY . .
 
 # Create necessary directories
 RUN mkdir -p temp output personas/prompts
 
-# Expose port for web API
-EXPOSE 8000
+# Expose ports for web API and debugger
+EXPOSE 8000 
 
-# Default command (can be overridden in docker-compose.yml)
-CMD ["uvicorn", "web_api:app", "--host", "0.0.0.0", "--port", "8000"]
+# Default command with hot reload enabled
+CMD ["python", "-Xfrozen_modules=off", "-m", "uvicorn", "web_api:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app"]
