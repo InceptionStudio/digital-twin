@@ -176,7 +176,7 @@ def main():
         print("1. Try the CLI: python cli.py --help")
         print("2. Start the web API: python web_api.py")
         print("3. Upload your own audio/video files")
-        print("4. Customize Chad's personality in chadprompt.txt")
+        print("4. Customize Chad's personality in personas/prompts/chad_goldstein.txt")
         
     except KeyboardInterrupt:
         print("\n\n⚠️  Examples cancelled by user")

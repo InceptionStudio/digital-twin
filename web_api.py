@@ -100,6 +100,9 @@ async def startup_event():
     """Initialize the workflow on startup."""
     global workflow
     try:
+        # Force reload personas to ensure fresh data
+        persona_manager.reload_personas()
+        
         workflow = ChadWorkflow()
         logger.info("Digital Twin Workflow initialized successfully")
     except Exception as e:
@@ -386,7 +389,16 @@ async def generate_video_background(job_id: str, input_data: GenerateVideoInput)
     try:
         # Get persona's avatar ID
         persona = persona_manager.get_persona(input_data.persona_id)
+        
+        # Debug: Print persona details
+        print(f"🔍 DEBUG - generate_video_background:")
+        print(f"   requested persona_id: {input_data.persona_id}")
+        print(f"   persona name: {persona.name if persona else 'None'}")
+        print(f"   persona heygen_avatar_id: {persona.heygen_avatar_id if persona else 'None'}")
+        print(f"   input_data.avatar_id: {input_data.avatar_id}")
+        
         avatar_id = input_data.avatar_id or persona.heygen_avatar_id if persona else None
+        print(f"   final avatar_id: {avatar_id}")
         
         # Generate video filename
         output_filename = input_data.output_filename or f"video_job_{job_id}"

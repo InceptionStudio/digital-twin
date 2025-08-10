@@ -1,19 +1,33 @@
-# Chad Goldstein Digital Twin
+# Digital Twin API
 
-A complete workflow system that generates hot take responses in the style of Chad Goldstein, a flamboyant venture capitalist, from audio and video inputs.
+A complete workflow system that generates personalized hot take responses from various personas using AI-powered audio and video processing.
 
 ## Features
 
 🎬 **Audio/Video Processing**: Convert speech to text using OpenAI Whisper
-💬 **AI Hot Takes**: Generate responses using GPT-4/GPT-5 with Chad's personality
-🎵 **Voice Synthesis**: Convert text to speech using ElevenLabs
-🎥 **Avatar Videos**: Create talking avatar videos using HeyGen Avatar IV
+💬 **AI Hot Takes**: Generate responses using GPT-5 with customizable personas
+🎵 **Voice Synthesis**: Convert text to speech using ElevenLabs or HeyGen
+🎥 **Avatar Videos**: Create talking avatar videos using HeyGen
+👥 **Multi-Persona Support**: Switch between different character personalities
+🔧 **Modular Workflow**: Process each step independently or as complete workflows
+
+## Available Personas
+
+- **Chad Goldstein**: Flamboyant venture capitalist with tech-bro energy
+- **Sarah Guo**: Analytical VC from Conviction with sharp insights
+- **Sarah Chen**: Tech journalist with industry expertise
+- **Custom Personas**: Create your own with unique prompts and voices
 
 ## Workflow
 
 ```
 Audio/Video Input → Transcript → Hot Take → Voice → Avatar Video
 ```
+
+**Or process steps independently:**
+- `POST /generate-text` - GPT text generation only
+- `POST /generate-audio` - ElevenLabs audio generation from text
+- `POST /generate-video` - HeyGen video generation from text or audio
 
 ## Installation
 
@@ -36,6 +50,9 @@ ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
 # HeyGen API Configuration
 HEYGEN_API_KEY=your_heygen_api_key_here
 
+# HuggingFace Token (for audio diarization)
+HUGGINGFACE_TOKEN=your_huggingface_token_here
+
 # Application Configuration (optional)
 MAX_FILE_SIZE_MB=50
 TEMP_DIR=./temp
@@ -46,19 +63,34 @@ OUTPUT_DIR=./output
 
 ### Command Line Interface
 
-**Process audio/video file**:
+**Process audio/video file with specific persona**:
 ```bash
-python cli.py --file "pitch_recording.mp4" --context "Series A startup pitch"
+python cli.py --file "pitch_recording.mp4" --context "Series A startup pitch" --persona sarah_guo
 ```
 
-**Process text input**:
+**Process text input with persona**:
 ```bash
-python cli.py --text "We're building an AI-powered dog walking app" --context "Pet tech startup"
+python cli.py --text "We're building an AI-powered dog walking app" --context "Pet tech startup" --persona chad_goldstein
 ```
 
-**Generate quick roast**:
+**Generate quick roast with persona**:
 ```bash
-python cli.py --roast "NFT marketplace for pets"
+python cli.py --roast "NFT marketplace for pets" --persona sarah_guo
+```
+
+**Use HeyGen voice directly**:
+```bash
+python cli.py --persona sarah_guo --heygen-voice --text "Your startup pitch here"
+```
+
+**List available personas**:
+```bash
+python cli.py --list-personas
+```
+
+**Show persona details**:
+```bash
+python cli.py --show-persona chad_goldstein
 ```
 
 **Test connections**:
@@ -82,9 +114,22 @@ uvicorn web_api:app --host 0.0.0.0 --port 8000
 
 **API Endpoints**:
 
+**Complete Workflows:**
 - `POST /process-file` - Upload audio/video file
 - `POST /process-text` - Process text input  
 - `POST /quick-roast` - Generate quick roast
+
+**Individual Steps:**
+- `POST /generate-text` - Generate text response only
+- `POST /generate-audio` - Generate audio from text
+- `POST /generate-video` - Generate video from text or audio
+
+**Persona Management:**
+- `GET /personas` - List available personas
+- `GET /personas/{persona_id}` - Get persona details
+- `GET /heygen-voices` - List HeyGen voices
+
+**System:**
 - `GET /job/{job_id}` - Check processing status
 - `GET /download/{filename}` - Download generated files
 - `GET /test` - Test service connections
@@ -92,16 +137,37 @@ uvicorn web_api:app --host 0.0.0.0 --port 8000
 
 **Example API usage**:
 ```bash
-# Upload file
-curl -X POST "http://localhost:8000/process-file" \
-  -F "file=@pitch.mp4" \
-  -F "context=Series A pitch"
+# Process text with specific persona
+curl -X POST "http://localhost:8000/process-text" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "We are building an AI startup",
+    "context": "Demo day pitch",
+    "persona_id": "sarah_guo"
+  }'
 
-# Check status
+# Generate text only
+curl -X POST "http://localhost:8000/generate-text" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "We are building an AI startup",
+    "persona_id": "chad_goldstein"
+  }'
+
+# Generate video with HeyGen voice
+curl -X POST "http://localhost:8000/generate-video" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "Hello world",
+    "persona_id": "sarah_guo",
+    "use_heygen_voice": true
+  }'
+
+# List personas
+curl "http://localhost:8000/personas"
+
+# Check job status
 curl "http://localhost:8000/job/{job_id}"
-
-# Download video
-curl "http://localhost:8000/download/chad_response_123.mp4" -o output.mp4
 ```
 
 ### Python Library
@@ -112,24 +178,56 @@ from chad_workflow import ChadWorkflow
 # Initialize
 workflow = ChadWorkflow()
 
-# Process audio/video file
+# Process audio/video file with persona
 results = workflow.process_audio_video_input(
     "pitch_recording.mp4",
-    context="Series A startup pitch"
+    context="Series A startup pitch",
+    persona_id="sarah_guo"
 )
 
-# Process text
+# Process text with persona
 results = workflow.process_text_input(
     "We're building an AI-powered dog walking app",
-    context="Pet tech startup"
+    context="Pet tech startup",
+    persona_id="chad_goldstein"
 )
 
-# Quick roast
-results = workflow.quick_roast("NFT marketplace for pets")
+# Quick roast with persona
+results = workflow.quick_roast(
+    "NFT marketplace for pets",
+    persona_id="sarah_guo"
+)
 
 print(f"Generated video: {results['video_path']}")
 print(f"Generated audio: {results['audio_path']}")
 print(f"Hot take: {results['hot_take']}")
+```
+
+## Persona Management
+
+### List Personas
+```bash
+python persona_cli.py list
+```
+
+### Add New Persona
+```bash
+python persona_cli.py add
+```
+
+### Show Persona Details
+```bash
+python persona_cli.py show chad_goldstein
+```
+
+### Update Persona
+```bash
+python persona_cli.py update chad_goldstein
+```
+
+### Delete Persona
+```bash
+python persona_cli.py delete chad_goldstein
 ```
 
 ## Configuration Options
@@ -163,20 +261,30 @@ print(f"Hot take: {results['hot_take']}")
 3. Get API key and avatar ID
 4. Add both to `.env`
 
-## Chad Goldstein Character
+### HuggingFace (for audio diarization)
+1. Go to [HuggingFace](https://huggingface.co/settings/tokens)
+2. Create a new token
+3. Add to `.env` as `HUGGINGFACE_TOKEN`
 
-Chad is a flamboyant, self-congratulatory venture capitalist who delivers pitch critiques with:
+## Default Personas
 
+### Chad Goldstein
+A flamboyant, self-congratulatory venture capitalist who delivers pitch critiques with:
 - **Ruthless candor** mixed with **tech-bro energy**
 - **Misguided self-comparisons** to Warren Buffett
 - **Colorful analogies** and **venture bro catchphrases**
-- **Format**: Opening quip → Highlights → Roast → Verdict
 
-Example catchphrases:
-- "Let's deploy some capital, baby!"
-- "This smells like pre-seed with a side of froth"
-- "Your moat? More like a kiddie pool"
-- "I've seen more traction on a stationary bike at Equinox"
+### Sarah Guo
+Founder of Conviction, early-stage AI investor with:
+- **Deep technical expertise** and **thoughtful analysis**
+- **Strategic insights** in the technology sector
+- **Sharp, incisive commentary** with **dry wit**
+
+### Sarah Chen
+Tech journalist with:
+- **Industry expertise** and **analytical perspective**
+- **Professional insights** on technology trends
+- **Balanced commentary** on startup pitches
 
 ## File Structure
 
@@ -185,7 +293,6 @@ digital-twin/
 ├── README.md                 # This file
 ├── requirements.txt          # Python dependencies
 ├── config.py                # Configuration management
-├── chadprompt.txt           # Chad's personality prompt
 ├── audio_processor.py       # Audio/video → transcript
 ├── gpt_generator.py         # GPT hot take generation
 ├── voice_generator.py       # ElevenLabs TTS
@@ -193,8 +300,25 @@ digital-twin/
 ├── chad_workflow.py         # Main workflow orchestrator
 ├── cli.py                   # Command-line interface
 ├── web_api.py              # FastAPI web interface
+├── persona_manager.py       # Persona management system
+├── persona_cli.py          # Persona CLI interface
+├── audio_diarizer.py       # Audio speaker separation
+├── personas/               # Persona configurations
+│   ├── personas.json       # Persona database
+│   └── prompts/           # Persona prompt files
+│       ├── chad_goldstein.txt
+│       └── sarah_guo.txt
 ├── temp/                   # Temporary files
 └── output/                 # Generated files
+```
+
+## Audio Diarization
+
+Separate multiple speakers in audio files:
+
+```bash
+python audio_diarizer.py --file "meeting_recording.mp3" --diarizer pyannote
+python audio_diarizer.py --file "meeting_recording.mp3" --diarizer simple --num-speakers 3
 ```
 
 ## Troubleshooting
@@ -211,10 +335,16 @@ python cli.py --test
 **Voice Quality**:
 - Adjust `voice_stability`, `voice_similarity`, `voice_style`
 - Try different ElevenLabs voice IDs
+- Use HeyGen voices for direct text-to-video
 
 **Video Generation Slow**:
 - HeyGen processing can take 2-10 minutes
 - Use the API's job status endpoint to monitor progress
+
+**Persona Issues**:
+```bash
+python persona_cli.py validate chad_goldstein
+```
 
 **Cleanup Old Files**:
 ```bash
@@ -231,6 +361,11 @@ python -m pytest
 **Start development API**:
 ```bash
 uvicorn web_api:app --reload --host 0.0.0.0 --port 8000
+```
+
+**Add example personas**:
+```bash
+python example_personas.py
 ```
 
 ## License

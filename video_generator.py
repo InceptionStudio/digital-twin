@@ -63,6 +63,15 @@ class VideoGenerator:
         """
         target_talking_photo_id = talking_photo_id or self.talking_photo_id
         
+        # Debug: Print all parameters
+        print(f"🔍 DEBUG - create_video_from_text:")
+        print(f"   talking_photo_id parameter: {talking_photo_id}")
+        print(f"   self.talking_photo_id (default): {self.talking_photo_id}")
+        print(f"   target_talking_photo_id (final): {target_talking_photo_id}")
+        print(f"   persona_name: {persona_name}")
+        print(f"   voice_id: {voice_id}")
+        print(f"   self.default_voice_id: {self.default_voice_id}")
+        
         if not target_talking_photo_id:
             raise ValueError("Talking Photo ID not specified in config or parameters")
         
@@ -150,6 +159,14 @@ class VideoGenerator:
             Video ID for tracking the generation process
         """
         target_talking_photo_id = talking_photo_id or self.talking_photo_id
+        
+        # Debug: Print all parameters
+        print(f"🔍 DEBUG - create_video_from_audio:")
+        print(f"   talking_photo_id parameter: {talking_photo_id}")
+        print(f"   self.talking_photo_id (default): {self.talking_photo_id}")
+        print(f"   target_talking_photo_id (final): {target_talking_photo_id}")
+        print(f"   persona_name: {persona_name}")
+        print(f"   audio_path: {audio_path}")
         
         if not target_talking_photo_id:
             raise ValueError("Talking Photo ID not specified in config or parameters")

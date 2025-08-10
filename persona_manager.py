@@ -62,9 +62,15 @@ class PersonaManager:
             with open(self.config_file, 'r') as f:
                 data = json.load(f)
             
+            print(f"🔍 DEBUG - Loaded JSON {self.config_file}: {data}")
             self.personas = {}
             for persona_id, persona_data in data.items():
                 self.personas[persona_id] = Persona.from_dict(persona_data)
+                # Debug: Print loaded persona details
+                print(f"🔍 DEBUG - Loaded persona {persona_id}:")
+                print(f"   name: {persona_data.get('name')}")
+                print(f"   heygen_avatar_id: {persona_data.get('heygen_avatar_id')}")
+                print(f"   heygen_voice_id: {persona_data.get('heygen_voice_id')}")
             
             logger.info(f"Loaded {len(self.personas)} personas")
             
@@ -88,11 +94,11 @@ class PersonaManager:
         chad_persona = Persona(
             name="Chad Goldstein",
             bio="A flamboyant, self-congratulatory venture capitalist and General Partner at Bling Capital Partners who delivers pitch critiques with ruthless candor, misguided self-comparisons to Warren Buffett, and unfiltered tech-bro energy",
-            prompt_file="chadprompt.txt",
+            prompt_file="personas/prompts/chad_goldstein.txt",
             image_file="ChadGoldstein.jpg",
             elevenlabs_voice_id=None,  # Can be set later
             heygen_voice_id="82025eb9625b4c09aec78f89528cc33a",
-            heygen_avatar_id="129fa3d48fad41e4975c4e9471d953fb",
+            heygen_avatar_id="0ccb7cd7f5fe49f09ae90df50f2e9140",
             description="The original hot take commentator with a distinctive voice and style - like Kevin O'Leary from Shark Tank, but with one exit, three podcasts, and a six-figure LinkedIn following"
         )
         
@@ -109,7 +115,15 @@ class PersonaManager:
     
     def get_persona(self, persona_id: str) -> Optional[Persona]:
         """Get a persona by ID"""
-        return self.personas.get(persona_id)
+        persona = self.personas.get(persona_id)
+        if persona:
+            print(f"🔍 DEBUG - get_persona({persona_id}):")
+            print(f"   name: {persona.name}")
+            print(f"   heygen_avatar_id: {persona.heygen_avatar_id}")
+            print(f"   heygen_voice_id: {persona.heygen_voice_id}")
+        else:
+            print(f"🔍 DEBUG - get_persona({persona_id}): Persona not found")
+        return persona
     
     def list_personas(self) -> List[Dict[str, Any]]:
         """List all available personas"""
@@ -203,6 +217,11 @@ class PersonaManager:
             "warnings": warnings,
             "persona": persona
         }
+    
+    def reload_personas(self) -> None:
+        """Force reload personas from the configuration file"""
+        print("🔄 Reloading personas from configuration file...")
+        self.load_personas()
 
 
 # Global persona manager instance
