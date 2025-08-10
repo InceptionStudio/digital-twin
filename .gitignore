@@ -5,6 +5,7 @@
 .env.local
 .env.production
 .env.staging
+.claude
 *.key
 secrets/
 config/secrets.json
