@@ -18,5 +18,15 @@
     "heygen_voice_id": "cb8c232f08a9466c870ad2c037fcf77a",
     "heygen_avatar_id": "129fa3d48fad41e4975c4e9471d953fb",
     "description": null
+  },
+  "russ_hanneman": {
+    "name": "Russ Hanneman",
+    "bio": "billionaire tech bro",
+    "prompt_file": "personas/prompts/russ_hanneman.txt",
+    "image_file": "personas/avatars/Russ.jpg",
+    "elevenlabs_voice_id": "gAKthYOSzqg2QQCLq9YD",
+    "heygen_voice_id": "39aba9482c74479ea3fa00023304392e",
+    "heygen_avatar_id": "de3a283990d8415082e26c2b81fb34c7",
+    "description": null
   }
 }
