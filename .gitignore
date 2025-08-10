@@ -246,3 +246,4 @@ development/
 # Configuration overrides
 config.local.py
 settings.local.py
+pretrained_models/
