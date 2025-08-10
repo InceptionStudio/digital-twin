@@ -10,13 +10,14 @@ from audio_processor import AudioProcessor
 from gpt_generator import HotTakeGenerator
 from voice_generator import VoiceGenerator
 from video_generator import VideoGenerator
+from persona_manager import persona_manager
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class ChadWorkflow:
-    """Main workflow orchestrator for generating Chad Goldstein hot take videos."""
+    """Main workflow orchestrator for generating hot take videos with multiple personas."""
     
     def __init__(self):
         """Initialize all components."""
@@ -28,29 +29,17 @@ class ChadWorkflow:
             self.voice_generator = VoiceGenerator()
             self.video_generator = VideoGenerator()
             
-            # Check if Chad's prompt loaded successfully
-            try:
-                with open("chadprompt.txt", "r", encoding="utf-8") as f:
-                    prompt_content = f.read().strip()
-                    if not prompt_content:
-                        logger.warning("⚠️  WARNING: chadprompt.txt file is empty! Chad may not be as flamboyant as usual.")
-                    else:
-                        logger.info("✅ Chad's personality prompt loaded successfully")
-            except FileNotFoundError:
-                logger.warning("⚠️  WARNING: chadprompt.txt file not found! Chad will use fallback personality.")
-            except Exception as e:
-                logger.warning(f"⚠️  WARNING: Error loading chadprompt.txt: {str(e)}. Chad will use fallback personality.")
-            
-            logger.info("Chad Workflow initialized successfully")
+            logger.info("Digital Twin Workflow initialized successfully")
             
         except Exception as e:
-            logger.error(f"Failed to initialize Chad Workflow: {str(e)}")
+            logger.error(f"Failed to initialize Digital Twin Workflow: {str(e)}")
             raise
     
     def process_audio_video_input(self, input_file: str, context: Optional[str] = None,
                                  output_filename: Optional[str] = None,
                                  avatar_id: Optional[str] = None,
-                                 voice_settings: Optional[Dict] = None) -> Dict[str, str]:
+                                 voice_settings: Optional[Dict] = None,
+                                 persona_id: str = "chad_goldstein") -> Dict[str, str]:
         """
         Complete workflow: Audio/Video -> Transcript -> Hot Take -> Voice -> Video
         
@@ -60,6 +49,7 @@ class ChadWorkflow:
             output_filename: Optional base filename for outputs
             avatar_id: Optional specific avatar ID to use
             voice_settings: Optional ElevenLabs voice settings
+            persona_id: Persona ID to use for generation
         
         Returns:
             Dictionary with paths to generated files and metadata
@@ -80,7 +70,7 @@ class ChadWorkflow:
             
             # Step 2: Generate hot take
             logger.info("Step 2: Generating hot take...")
-            hot_take_result = self.hot_take_generator.generate_hot_take(transcript, context)
+            hot_take_result = self.hot_take_generator.generate_hot_take(transcript, context, persona_id)
             results["hot_take"] = hot_take_result["hot_take"]
             results["openai_latency"] = hot_take_result["latency_seconds"]
             results["openai_tokens"] = hot_take_result["total_tokens"]
@@ -128,7 +118,8 @@ class ChadWorkflow:
     def process_text_input(self, text: str, context: Optional[str] = None,
                           output_filename: Optional[str] = None,
                           avatar_id: Optional[str] = None,
-                          voice_settings: Optional[Dict] = None) -> Dict[str, str]:
+                          voice_settings: Optional[Dict] = None,
+                          persona_id: str = "chad_goldstein") -> Dict[str, str]:
         """
         Workflow for text input: Text -> Hot Take -> Voice -> Video
         
@@ -138,6 +129,7 @@ class ChadWorkflow:
             output_filename: Optional base filename for outputs
             avatar_id: Optional specific avatar ID to use
             voice_settings: Optional ElevenLabs voice settings
+            persona_id: Persona ID to use for generation
         
         Returns:
             Dictionary with paths to generated files and metadata
@@ -152,7 +144,7 @@ class ChadWorkflow:
         try:
             # Step 1: Generate hot take
             logger.info("Step 1: Generating hot take from text...")
-            hot_take_result = self.hot_take_generator.generate_hot_take(text, context)
+            hot_take_result = self.hot_take_generator.generate_hot_take(text, context, persona_id)
             results["hot_take"] = hot_take_result["hot_take"]
             results["openai_latency"] = hot_take_result["latency_seconds"]
             results["openai_tokens"] = hot_take_result["total_tokens"]
@@ -200,7 +192,8 @@ class ChadWorkflow:
     def process_text_input_heygen_voice(self, text: str, context: Optional[str] = None,
                                        output_filename: Optional[str] = None,
                                        avatar_id: Optional[str] = None,
-                                       voice_id: Optional[str] = None) -> Dict[str, str]:
+                                       voice_id: Optional[str] = None,
+                                       persona_id: str = "chad_goldstein") -> Dict[str, str]:
         """
         Complete workflow using HeyGen's text-to-speech: Text -> Hot Take -> Video (with HeyGen voice)
         
@@ -210,6 +203,7 @@ class ChadWorkflow:
             output_filename: Optional base filename for outputs
             avatar_id: Optional specific avatar ID to use
             voice_id: Optional HeyGen voice ID to use
+            persona_id: Persona ID to use for generation
         
         Returns:
             Dictionary with paths to generated files and metadata
@@ -225,7 +219,7 @@ class ChadWorkflow:
         try:
             # Step 1: Generate hot take
             logger.info("Step 1: Generating hot take...")
-            hot_take_result = self.hot_take_generator.generate_hot_take(text, context)
+            hot_take_result = self.hot_take_generator.generate_hot_take(text, context, persona_id)
             results["hot_take"] = hot_take_result["hot_take"]
             results["openai_latency"] = hot_take_result["latency_seconds"]
             results["openai_tokens"] = hot_take_result["total_tokens"]
@@ -262,7 +256,8 @@ class ChadWorkflow:
             raise
     
     def quick_roast(self, topic: str, output_filename: Optional[str] = None,
-                   avatar_id: Optional[str] = None) -> Dict[str, str]:
+                   avatar_id: Optional[str] = None,
+                   persona_id: str = "chad_goldstein") -> Dict[str, str]:
         """
         Quick roast workflow: Topic -> Quick Roast -> Voice -> Video
         
@@ -270,6 +265,7 @@ class ChadWorkflow:
             topic: Topic to roast
             output_filename: Optional base filename for outputs
             avatar_id: Optional specific avatar ID to use
+            persona_id: Persona ID to use for generation
         
         Returns:
             Dictionary with paths to generated files and metadata
@@ -284,7 +280,7 @@ class ChadWorkflow:
         try:
             # Step 1: Generate quick roast
             logger.info(f"Step 1: Generating quick roast for: {topic}")
-            roast_result = self.hot_take_generator.generate_quick_roast(topic)
+            roast_result = self.hot_take_generator.generate_quick_roast(topic, persona_id)
             results["roast"] = roast_result["roast"]
             results["openai_latency"] = roast_result["latency_seconds"]
             results["openai_tokens"] = roast_result["total_tokens"]

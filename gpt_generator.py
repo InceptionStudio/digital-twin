@@ -2,11 +2,20 @@ import openai
 import time
 from typing import Optional, Dict, Any
 from config import Config
+from persona_manager import persona_manager
 
 class HotTakeGenerator:
     def __init__(self):
         self.client = openai.OpenAI(api_key=Config.OPENAI_API_KEY)
-        self.chad_prompt = self._load_chad_prompt()
+    
+    def _get_persona_prompt(self, persona_id: str = "chad_goldstein") -> str:
+        """Get the persona's prompt content."""
+        prompt_content = persona_manager.get_prompt_content(persona_id)
+        if prompt_content:
+            return prompt_content
+        
+        # Fallback to Chad's prompt if persona not found
+        return self._load_chad_prompt()
     
     def _load_chad_prompt(self) -> str:
         """Load the Chad Goldstein character prompt from file."""
@@ -38,8 +47,18 @@ Format your response like an investor-style commentary:
 
 Stay in character the entire time. Be witty, self-deluded, and entertaining."""
     
-    def generate_hot_take(self, pitch_transcript: str, context: Optional[str] = None) -> Dict[str, Any]:
+    def generate_hot_take(self, pitch_transcript: str, context: Optional[str] = None, persona_id: str = "chad_goldstein") -> Dict[str, Any]:
         """Generate a hot take response based on the pitch transcript."""
+        
+        # Get persona information
+        persona = persona_manager.get_persona(persona_id)
+        if not persona:
+            print(f"⚠️  WARNING: Persona '{persona_id}' not found. Using Chad Goldstein as fallback.")
+            persona_id = "chad_goldstein"
+            persona = persona_manager.get_persona(persona_id)
+        
+        # Get persona's prompt
+        persona_prompt = self._get_persona_prompt(persona_id)
         
         # Construct the user message
         user_message = f"Here's a startup pitch I just heard:\n\n{pitch_transcript}"
@@ -47,7 +66,7 @@ Stay in character the entire time. Be witty, self-deluded, and entertaining."""
         if context:
             user_message += f"\n\nAdditional context: {context}"
         
-        user_message += "\n\nGive me your hot take, Chad!"
+        user_message += f"\n\nGive me your hot take, {persona.name}!"
         
         start_time = time.time()
         
@@ -57,7 +76,7 @@ Stay in character the entire time. Be witty, self-deluded, and entertaining."""
                 messages=[
                     {
                         "role": "system",
-                        "content": self.chad_prompt
+                        "content": persona_prompt
                     },
                     {
                         "role": "user", 
@@ -95,8 +114,18 @@ Stay in character the entire time. Be witty, self-deluded, and entertaining."""
             print(f"❌ OpenAI API Error after {latency:.2f}s: {str(e)}")
             raise Exception(f"Failed to generate hot take: {str(e)}")
     
-    def generate_quick_roast(self, topic: str) -> Dict[str, Any]:
+    def generate_quick_roast(self, topic: str, persona_id: str = "chad_goldstein") -> Dict[str, Any]:
         """Generate a quick roast on any topic."""
+        # Get persona information
+        persona = persona_manager.get_persona(persona_id)
+        if not persona:
+            print(f"⚠️  WARNING: Persona '{persona_id}' not found. Using Chad Goldstein as fallback.")
+            persona_id = "chad_goldstein"
+            persona = persona_manager.get_persona(persona_id)
+        
+        # Get persona's prompt
+        persona_prompt = self._get_persona_prompt(persona_id)
+        
         user_message = f"Give me a quick hot take roast about: {topic}"
         
         start_time = time.time()
@@ -107,7 +136,7 @@ Stay in character the entire time. Be witty, self-deluded, and entertaining."""
                 messages=[
                     {
                         "role": "system",
-                        "content": self.chad_prompt + "\n\nKeep this response short and punchy - just 2-3 sentences max."
+                        "content": persona_prompt + "\n\nKeep this response short and punchy - just 2-3 sentences max."
                     },
                     {
                         "role": "user",
