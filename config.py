@@ -15,6 +15,7 @@ class Config:
     # Voice and Avatar Settings
     ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")  # Default voice
     HEYGEN_AVATAR_ID = os.getenv("HEYGEN_AVATAR_ID")
+    HEYGEN_VOICE_ID = os.getenv("HEYGEN_VOICE_ID", "82025eb9625b4c09aec78f89528cc33a")  # Default HeyGen voice
     
     # File Settings
     MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "50"))

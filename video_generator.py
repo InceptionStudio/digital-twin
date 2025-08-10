@@ -9,6 +9,7 @@ class VideoGenerator:
     def __init__(self):
         self.api_key = Config.HEYGEN_API_KEY
         self.talking_photo_id = Config.HEYGEN_AVATAR_ID  # Using avatar_id config for talking_photo_id
+        self.default_voice_id = Config.HEYGEN_VOICE_ID  # Default voice ID
         self.base_url = "https://api.heygen.com/v2"
         
         if not self.api_key:
@@ -27,6 +28,20 @@ class VideoGenerator:
             return response.json()
         except Exception as e:
             raise Exception(f"Failed to fetch avatars: {str(e)}")
+    
+    def get_voices(self) -> Dict[str, Any]:
+        """Get list of available voices."""
+        headers = {
+            "X-Api-Key": self.api_key,
+            "Content-Type": "application/json"
+        }
+        
+        try:
+            response = requests.get(f"{self.base_url}/voices", headers=headers)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            raise Exception(f"Failed to fetch voices: {str(e)}")
     
     def create_video_from_text(self, text: str, output_filename: Optional[str] = None,
                               talking_photo_id: Optional[str] = None,
@@ -82,7 +97,7 @@ class VideoGenerator:
                     },
                     "voice": {
                         "type": "text",
-                        "voice_id": voice_id or "default",
+                        "voice_id": voice_id or self.default_voice_id,
                         "input_text": text,
                         "speed": 1,
                         "pitch": 0,
@@ -266,15 +281,15 @@ class VideoGenerator:
         except Exception as e:
             raise Exception(f"Failed to get video status: {str(e)}")
     
-    def wait_for_video_completion(self, video_id: str, max_wait_time: int = 600,
+    def wait_for_video_completion(self, video_id: str, max_wait_time: int = 1200,
                                  check_interval: int = 10) -> Dict[str, Any]:
         """
         Wait for video generation to complete.
         
         Args:
             video_id: The video ID to check
-            max_wait_time: Maximum time to wait in seconds
-            check_interval: How often to check status in seconds
+            max_wait_time: Maximum time to wait in seconds (default: 1200)
+            check_interval: How often to check status in seconds (default: 10)
         
         Returns:
             Final video status
@@ -352,6 +367,34 @@ class VideoGenerator:
         """
         # Create video from audio
         video_id = self.create_video_from_audio(audio_path, output_filename, talking_photo_id)
+        
+        # Wait for completion
+        final_status = self.wait_for_video_completion(video_id)
+        
+        # Download the video
+        video_url = final_status.get("video_url")
+        if not video_url:
+            raise Exception("No video URL in final status")
+        
+        return self.download_video(video_url, output_filename)
+    
+    def generate_complete_video_from_text(self, text: str, output_filename: Optional[str] = None,
+                                         talking_photo_id: Optional[str] = None,
+                                         voice_id: Optional[str] = None) -> str:
+        """
+        Generate a complete video directly from text using HeyGen's voice synthesis.
+        
+        Args:
+            text: The text for the talking photo to speak
+            output_filename: Optional filename for the output video
+            talking_photo_id: Optional specific talking photo ID to use
+            voice_id: Optional voice ID to use
+        
+        Returns:
+            Path to the generated video file
+        """
+        # Create video from text
+        video_id = self.create_video_from_text(text, output_filename, talking_photo_id, voice_id)
         
         # Wait for completion
         final_status = self.wait_for_video_completion(video_id)

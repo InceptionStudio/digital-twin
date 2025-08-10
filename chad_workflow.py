@@ -197,6 +197,70 @@ class ChadWorkflow:
             logger.error(f"Text workflow failed: {str(e)}")
             raise
     
+    def process_text_input_heygen_voice(self, text: str, context: Optional[str] = None,
+                                       output_filename: Optional[str] = None,
+                                       avatar_id: Optional[str] = None,
+                                       voice_id: Optional[str] = None) -> Dict[str, str]:
+        """
+        Complete workflow using HeyGen's text-to-speech: Text -> Hot Take -> Video (with HeyGen voice)
+        
+        Args:
+            text: Input text to generate hot take from
+            context: Optional context to provide with the pitch
+            output_filename: Optional base filename for outputs
+            avatar_id: Optional specific avatar ID to use
+            voice_id: Optional HeyGen voice ID to use
+        
+        Returns:
+            Dictionary with paths to generated files and metadata
+        """
+        start_time = time.time()
+        results = {
+            "input_text": text,
+            "timestamp": int(start_time),
+            "status": "processing",
+            "voice_provider": "heygen"
+        }
+        
+        try:
+            # Step 1: Generate hot take
+            logger.info("Step 1: Generating hot take...")
+            hot_take_result = self.hot_take_generator.generate_hot_take(text, context)
+            results["hot_take"] = hot_take_result["hot_take"]
+            results["openai_latency"] = hot_take_result["latency_seconds"]
+            results["openai_tokens"] = hot_take_result["total_tokens"]
+            logger.info(f"Hot take generated: {len(hot_take_result['hot_take'])} characters in {hot_take_result['latency_seconds']:.2f}s")
+            
+            # Step 2: Generate video directly from text using HeyGen's voice
+            logger.info("Step 2: Generating video with HeyGen voice...")
+            if not output_filename:
+                output_filename = f"chad_response_{int(start_time)}"
+            
+            video_filename = f"{output_filename}.mp4"
+            video_path = self.video_generator.generate_complete_video_from_text(
+                hot_take_result["hot_take"], 
+                video_filename, 
+                avatar_id,
+                voice_id
+            )
+            results["video_path"] = video_path
+            results["voice_id"] = voice_id or "default"
+            logger.info(f"Video generated with HeyGen voice: {video_path}")
+            
+            # Calculate total processing time
+            total_time = time.time() - start_time
+            results["total_processing_time"] = total_time
+            results["status"] = "completed"
+            
+            logger.info(f"✅ Complete workflow with HeyGen voice finished in {total_time:.2f}s")
+            return results
+            
+        except Exception as e:
+            results["status"] = "failed"
+            results["error"] = str(e)
+            logger.error(f"❌ Workflow failed: {str(e)}")
+            raise
+    
     def quick_roast(self, topic: str, output_filename: Optional[str] = None,
                    avatar_id: Optional[str] = None) -> Dict[str, str]:
         """

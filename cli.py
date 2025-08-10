@@ -33,6 +33,18 @@ def main():
         help="Topic to generate a quick roast about"
     )
     
+    # Voice provider options
+    parser.add_argument(
+        "--heygen-voice",
+        action="store_true",
+        help="Use HeyGen's text-to-speech instead of ElevenLabs"
+    )
+    parser.add_argument(
+        "--heygen-voice-id",
+        type=str,
+        help="Specific HeyGen voice ID to use (defaults to HEYGEN_VOICE_ID from config)"
+    )
+    
     # Optional parameters
     parser.add_argument(
         "--context", "-c",
@@ -80,6 +92,11 @@ def main():
         help="Show service information (available voices, avatars)"
     )
     parser.add_argument(
+        "--list-heygen-voices",
+        action="store_true",
+        help="List available HeyGen voices"
+    )
+    parser.add_argument(
         "--cleanup",
         action="store_true",
         help="Clean up temporary and old files"
@@ -93,9 +110,9 @@ def main():
     args = parser.parse_args()
     
     # Validate arguments - if no utility commands, require input
-    if not any([args.test, args.info, args.cleanup]):
+    if not any([args.test, args.info, args.cleanup, args.list_heygen_voices]):
         if not any([args.file, args.text, args.roast]):
-            parser.error("Must specify one of: --file, --text, --roast, --test, --info, or --cleanup")
+            parser.error("Must specify one of: --file, --text, --roast, --test, --info, --list-heygen-voices, or --cleanup")
     
     # Set up logging level
     if args.verbose:
@@ -134,6 +151,40 @@ def main():
             print("✅ Cleanup completed")
             return 0
         
+        if args.list_heygen_voices:
+            print("\n🎤 Available HeyGen Voices:")
+            try:
+                voices = workflow.video_generator.get_voices()
+                
+                if isinstance(voices, dict) and "data" in voices and isinstance(voices["data"], list):
+                    voice_list = voices["data"]
+                else:
+                    print(f"  Unexpected response structure")
+                    return 0
+                
+                # Sort voices by language and name for better organization
+                voice_list.sort(key=lambda x: (x.get("language", ""), x.get("name", "")))
+                
+                current_language = None
+                for voice in voice_list:
+                    voice_id = voice.get("voice_id", "N/A")
+                    name = voice.get("name", "Unnamed")
+                    language = voice.get("language", "Unknown")
+                    gender = voice.get("gender", "Unknown")
+                    
+                    # Print language header when it changes
+                    if language != current_language:
+                        print(f"\n📁 {language}:")
+                        current_language = language
+                    
+                    print(f"  • {name} ({gender}) - ID: {voice_id}")
+                
+                print(f"\n✅ Found {len(voice_list)} voices")
+                
+            except Exception as e:
+                print(f"❌ Error fetching voices: {str(e)}")
+            return 0
+        
         # Prepare voice settings
         voice_settings = {
             "stability": args.voice_stability,
@@ -157,14 +208,24 @@ def main():
             )
         
         elif args.text:
-            print(f"\n📝 Processing text input...")
-            results = workflow.process_text_input(
-                args.text,
-                context=args.context,
-                output_filename=args.output,
-                avatar_id=args.avatar_id,
-                voice_settings=voice_settings
-            )
+            if args.heygen_voice:
+                print(f"\n📝 Processing text input with HeyGen voice...")
+                results = workflow.process_text_input_heygen_voice(
+                    args.text,
+                    context=args.context,
+                    output_filename=args.output,
+                    avatar_id=args.avatar_id,
+                    voice_id=args.heygen_voice_id
+                )
+            else:
+                print(f"\n📝 Processing text input with ElevenLabs voice...")
+                results = workflow.process_text_input(
+                    args.text,
+                    context=args.context,
+                    output_filename=args.output,
+                    avatar_id=args.avatar_id,
+                    voice_settings=voice_settings
+                )
         
         elif args.roast:
             print(f"\n🔥 Generating quick roast for: {args.roast}")
@@ -182,9 +243,16 @@ def main():
             print(f"💬 Hot Take: {len(results.get('hot_take', results.get('roast', '')))} characters")
             if 'openai_latency' in results:
                 print(f"⏱️  OpenAI API: {results['openai_latency']:.2f}s ({results.get('openai_tokens', 'N/A')} tokens)")
-            print(f"🎵 Audio: {results['audio_path']}")
-            print(f"🎥 Video: {results['video_path']}")
-            print(f"⏱️  Total processing time: {results['processing_time']:.2f} seconds")
+            
+            # Handle different voice providers
+            if results.get("voice_provider") == "heygen":
+                print(f"🎤 Voice: HeyGen (ID: {results.get('voice_id', 'default')})")
+                print(f"🎥 Video: {results['video_path']}")
+                print(f"⏱️  Total processing time: {results['total_processing_time']:.2f} seconds")
+            else:
+                print(f"🎵 Audio: {results['audio_path']}")
+                print(f"🎥 Video: {results['video_path']}")
+                print(f"⏱️  Total processing time: {results['processing_time']:.2f} seconds")
             
             # Show hot take preview
             hot_take_text = results.get('hot_take', results.get('roast', ''))
