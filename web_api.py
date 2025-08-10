@@ -78,6 +78,10 @@ class GenerateVideoInput(BaseModel):
     persona_id: Optional[str] = "chad_goldstein"
     use_heygen_voice: Optional[bool] = False
 
+class GeneratePitchInput(BaseModel):
+    idea: str  # The pitch idea/context to respond to
+    id: List[str]  # List of persona IDs (will use the first one)
+
 class ProcessingStatus(BaseModel):
     job_id: str
     status: str
@@ -711,6 +715,107 @@ async def quick_roast_background(job_id: str, input_data: RoastInput):
             "error": str(e),
             "progress": "Quick roast failed"
         })
+
+@app.post("/generate-pitch")
+async def generate_pitch(input_data: GeneratePitchInput):
+    """
+    Generate a complete pitch response with text, audio, and video outputs.
+    Returns all outputs directly without requiring job polling.
+    
+    Request format:
+    {
+        "idea": "AI pitch description",
+        "id": ["sarah"]  // List of persona IDs, uses first one
+    }
+    
+    Returns:
+        Complete response with output_text, output_audio, and output_video
+    """
+    if not workflow:
+        raise HTTPException(status_code=500, detail="Workflow not initialized")
+    
+    # Get the first persona ID from the list
+    if not input_data.id or len(input_data.id) == 0:
+        raise HTTPException(status_code=400, detail="No persona ID provided in 'id' field")
+    
+    persona_id = input_data.id[0]  # Use the first ID from the list
+    
+    # Validate persona exists and has required configurations
+    persona = persona_manager.get_persona(persona_id)
+    if not persona:
+        raise HTTPException(status_code=400, detail=f"Persona '{persona_id}' not found")
+    
+    # Validate persona has necessary IDs configured
+    if not persona.elevenlabs_voice_id and not persona.heygen_voice_id:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Persona '{persona_id}' has no voice configuration"
+        )
+    
+    try:
+        import time
+        start_time = time.time()
+        
+        # Use job_id internally for file naming
+        job_id = str(uuid.uuid4())
+        
+        logger.info(f"Starting pitch generation for idea: {input_data.idea[:50]}... with persona: {persona_id}")
+        
+        # Step 1: Generate text (hot take) using the idea as context
+        hot_take_result = workflow.hot_take_generator.generate_hot_take(
+            input_data.idea,  # The pitch idea to respond to
+            context=None,
+            persona_id=persona_id
+        )
+        output_text = hot_take_result["hot_take"]
+        
+        # Step 2: Generate audio using persona's voice configuration
+        timestamp = int(time.time())
+        audio_filename = f"pitch_audio_{job_id}_{timestamp}.mp3"
+        
+        output_audio = workflow.voice_generator.generate_speech(
+            output_text,
+            audio_filename,
+            voice_settings=None,  # Use default settings
+            voice_id=persona.elevenlabs_voice_id
+        )
+        
+        # Step 3: Generate video using persona's avatar
+        video_filename = f"pitch_video_{job_id}_{timestamp}.mp4"
+        
+        output_video = workflow.video_generator.generate_complete_video(
+            output_audio,
+            video_filename,
+            talking_photo_id=persona.heygen_avatar_id,
+            persona_name=persona.name
+        )
+        
+        # Calculate total time
+        total_time = time.time() - start_time
+        
+        logger.info(f"Pitch generation completed in {total_time:.2f}s")
+        
+        # Return all outputs directly
+        return {
+            "output_text": output_text,
+            "output_audio": f"/download/{Path(output_audio).name}",
+            "output_video": f"/download/{Path(output_video).name}",
+            "persona_used": {
+                "id": persona_id,
+                "name": persona.name
+            },
+            "processing_details": {
+                "text_generation": {
+                    "tokens": hot_take_result.get("total_tokens", 0),
+                    "latency": hot_take_result.get("latency_seconds", 0)
+                },
+                "total_processing_time": total_time
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Pitch generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Pitch generation failed: {str(e)}")
 
 @app.get("/job/{job_id}")
 async def get_job_status(job_id: str):
