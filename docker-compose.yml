@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  digital-twin:
+    build: .
+    container_name: digital-twin-app
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./temp:/app/temp
+      - ./output:/app/output
+      - ./personas:/app/personas
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
+      - HEYGEN_API_KEY=${HEYGEN_API_KEY}
+      - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN}
+      - MAX_FILE_SIZE_MB=${MAX_FILE_SIZE_MB:-50}
+      - TEMP_DIR=/app/temp
+      - OUTPUT_DIR=/app/output
+    restart: unless-stopped
+    networks:
+      - digital-twin-network
+
+  # Optional: Add a CLI service for running specific commands
+  digital-twin-cli:
+    build: .
+    container_name: digital-twin-cli
+    volumes:
+      - ./temp:/app/temp
+      - ./output:/app/output
+      - ./personas:/app/personas
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
+      - HEYGEN_API_KEY=${HEYGEN_API_KEY}
+      - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN}
+      - MAX_FILE_SIZE_MB=${MAX_FILE_SIZE_MB:-50}
+      - TEMP_DIR=/app/temp
+      - OUTPUT_DIR=/app/output
+    command: python cli.py
+    stdin_open: true
+    tty: true
+    profiles:
+      - cli
+    networks:
+      - digital-twin-network
+
+networks:
+  digital-twin-network:
+    driver: bridge
