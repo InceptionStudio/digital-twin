@@ -305,8 +305,8 @@ class AudioDiarizer:
             "transcript_file": str(transcript_file)
         }
     
-    def test_connection(self) -> bool:
-        """Test the selected diarization model with DiaTest.mp3."""
+    def test_diarization(self) -> bool:
+        """Test the selected diarization functionality with DiaTest.mp3."""
         try:
             test_file = "DiaTest.mp3"
             if not Path(test_file).exists():
@@ -336,7 +336,7 @@ def main():
     parser = argparse.ArgumentParser(description="Audio Diarization Tool using pyannote.audio or simple_diarizer")
     parser.add_argument("audio_file", nargs="?", help="Path to the audio file to process")
     parser.add_argument("-o", "--output", help="Output directory (defaults to config OUTPUT_DIR)")
-    parser.add_argument("--test", action="store_true", help="Test API connection")
+    parser.add_argument("--test", action="store_true", help="Test diarization functionality")
     parser.add_argument("--diarizer", choices=["pyannote", "simple"], default="pyannote", 
                        help="Diarization backend to use (default: pyannote)")
     parser.add_argument("--embed-model", choices=["xvec", "ecapa"], default="xvec",
@@ -364,11 +364,11 @@ def main():
         )
         
         if args.test:
-            print("🔧 Testing API connection...")
-            if diarizer.test_connection():
-                print("✅ API connection successful")
+            print("🔧 Testing diarization functionality...")
+            if diarizer.test_diarization():
+                print("✅ Diarization test successful")
             else:
-                print("❌ API connection failed")
+                print("❌ Diarization test failed")
             return
         
         print("🎤 Audio Diarization Tool")
