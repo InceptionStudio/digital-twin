@@ -58,6 +58,26 @@ class RoastInput(BaseModel):
     avatar_id: Optional[str] = None
     persona_id: Optional[str] = "chad_goldstein"
 
+class GenerateTextInput(BaseModel):
+    text: str
+    context: Optional[str] = None
+    persona_id: Optional[str] = "chad_goldstein"
+
+class GenerateAudioInput(BaseModel):
+    text: str
+    output_filename: Optional[str] = None
+    voice_settings: Optional[Dict[str, float]] = None
+    persona_id: Optional[str] = "chad_goldstein"
+
+class GenerateVideoInput(BaseModel):
+    text: Optional[str] = None
+    audio_path: Optional[str] = None
+    output_filename: Optional[str] = None
+    avatar_id: Optional[str] = None
+    voice_id: Optional[str] = None
+    persona_id: Optional[str] = "chad_goldstein"
+    use_heygen_voice: Optional[bool] = False
+
 class ProcessingStatus(BaseModel):
     job_id: str
     status: str
@@ -96,6 +116,9 @@ async def root():
             "POST /process-file": "Process audio/video file",
             "POST /process-text": "Process text input",
             "POST /quick-roast": "Generate quick roast",
+            "POST /generate-text": "Generate text response only",
+            "POST /generate-audio": "Generate audio from text",
+            "POST /generate-video": "Generate video from text or audio",
             "GET /personas": "List available personas",
             "GET /personas/{persona_id}": "Get persona details",
             "GET /heygen-voices": "List HeyGen voices",
@@ -166,6 +189,270 @@ async def list_heygen_voices():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/generate-text")
+async def generate_text(
+    background_tasks: BackgroundTasks,
+    input_data: GenerateTextInput
+):
+    """Generate text response only (GPT step)."""
+    if not workflow:
+        raise HTTPException(status_code=500, detail="Workflow not initialized")
+    
+    # Validate persona
+    persona = persona_manager.get_persona(input_data.persona_id)
+    if not persona:
+        raise HTTPException(status_code=400, detail=f"Persona '{input_data.persona_id}' not found")
+    
+    job_id = str(uuid.uuid4())
+    
+    # Initialize job
+    jobs[job_id] = {
+        "status": "processing",
+        "progress": f"Generating text response with {persona.name}...",
+        "persona_id": input_data.persona_id,
+        "step": "text_generation"
+    }
+    
+    # Start background processing
+    background_tasks.add_task(
+        generate_text_background,
+        job_id,
+        input_data
+    )
+    
+    return {
+        "job_id": job_id, 
+        "status": "processing", 
+        "message": f"Text generation started with {persona.name}",
+        "persona": persona.name
+    }
+
+async def generate_text_background(job_id: str, input_data: GenerateTextInput):
+    """Background task for text generation."""
+    try:
+        # Generate hot take using GPT
+        hot_take_result = workflow.hot_take_generator.generate_hot_take(
+            input_data.text, 
+            input_data.context, 
+            input_data.persona_id
+        )
+        
+        results = {
+            "input_text": input_data.text,
+            "context": input_data.context,
+            "hot_take": hot_take_result["hot_take"],
+            "openai_latency": hot_take_result["latency_seconds"],
+            "openai_tokens": hot_take_result["total_tokens"],
+            "persona_id": input_data.persona_id,
+            "step": "text_generation"
+        }
+        
+        jobs[job_id].update({
+            "status": "completed",
+            "results": results,
+            "progress": "Text generation completed successfully"
+        })
+        
+    except Exception as e:
+        jobs[job_id].update({
+            "status": "failed",
+            "error": str(e),
+            "progress": "Text generation failed"
+        })
+
+@app.post("/generate-audio")
+async def generate_audio(
+    background_tasks: BackgroundTasks,
+    input_data: GenerateAudioInput
+):
+    """Generate audio from text (ElevenLabs step)."""
+    if not workflow:
+        raise HTTPException(status_code=500, detail="Workflow not initialized")
+    
+    # Validate persona
+    persona = persona_manager.get_persona(input_data.persona_id)
+    if not persona:
+        raise HTTPException(status_code=400, detail=f"Persona '{input_data.persona_id}' not found")
+    
+    job_id = str(uuid.uuid4())
+    
+    # Initialize job
+    jobs[job_id] = {
+        "status": "processing",
+        "progress": f"Generating audio with {persona.name}...",
+        "persona_id": input_data.persona_id,
+        "step": "audio_generation"
+    }
+    
+    # Start background processing
+    background_tasks.add_task(
+        generate_audio_background,
+        job_id,
+        input_data
+    )
+    
+    return {
+        "job_id": job_id, 
+        "status": "processing", 
+        "message": f"Audio generation started with {persona.name}",
+        "persona": persona.name
+    }
+
+async def generate_audio_background(job_id: str, input_data: GenerateAudioInput):
+    """Background task for audio generation."""
+    try:
+        # Get persona's voice ID
+        persona = persona_manager.get_persona(input_data.persona_id)
+        voice_id = persona.elevenlabs_voice_id if persona else None
+        
+        # Generate audio filename
+        output_filename = input_data.output_filename or f"audio_job_{job_id}"
+        audio_filename = f"{output_filename}.mp3"
+        
+        # Generate audio using ElevenLabs
+        audio_path = workflow.voice_generator.generate_speech(
+            input_data.text,
+            audio_filename,
+            input_data.voice_settings,
+            voice_id
+        )
+        
+        results = {
+            "input_text": input_data.text,
+            "audio_path": audio_path,
+            "voice_id": voice_id,
+            "persona_id": input_data.persona_id,
+            "step": "audio_generation"
+        }
+        
+        jobs[job_id].update({
+            "status": "completed",
+            "results": results,
+            "progress": "Audio generation completed successfully"
+        })
+        
+    except Exception as e:
+        jobs[job_id].update({
+            "status": "failed",
+            "error": str(e),
+            "progress": "Audio generation failed"
+        })
+
+@app.post("/generate-video")
+async def generate_video(
+    background_tasks: BackgroundTasks,
+    input_data: GenerateVideoInput
+):
+    """Generate video from text or audio (HeyGen step)."""
+    if not workflow:
+        raise HTTPException(status_code=500, detail="Workflow not initialized")
+    
+    # Validate persona
+    persona = persona_manager.get_persona(input_data.persona_id)
+    if not persona:
+        raise HTTPException(status_code=400, detail=f"Persona '{input_data.persona_id}' not found")
+    
+    # Validate input
+    if not input_data.text and not input_data.audio_path:
+        raise HTTPException(status_code=400, detail="Either text or audio_path must be provided")
+    
+    job_id = str(uuid.uuid4())
+    
+    # Initialize job
+    jobs[job_id] = {
+        "status": "processing",
+        "progress": f"Generating video with {persona.name}...",
+        "persona_id": input_data.persona_id,
+        "step": "video_generation"
+    }
+    
+    # Start background processing
+    background_tasks.add_task(
+        generate_video_background,
+        job_id,
+        input_data
+    )
+    
+    return {
+        "job_id": job_id, 
+        "status": "processing", 
+        "message": f"Video generation started with {persona.name}",
+        "persona": persona.name
+    }
+
+async def generate_video_background(job_id: str, input_data: GenerateVideoInput):
+    """Background task for video generation."""
+    try:
+        # Get persona's avatar ID
+        persona = persona_manager.get_persona(input_data.persona_id)
+        avatar_id = input_data.avatar_id or persona.heygen_avatar_id if persona else None
+        
+        # Generate video filename
+        output_filename = input_data.output_filename or f"video_job_{job_id}"
+        video_filename = f"{output_filename}.mp4"
+        
+        if input_data.text:
+            # Generate video from text
+            if input_data.use_heygen_voice:
+                # Use HeyGen voice directly
+                voice_id = input_data.voice_id or persona.heygen_voice_id if persona else None
+                video_path = workflow.video_generator.generate_complete_video_from_text(
+                    input_data.text,
+                    video_filename,
+                    avatar_id,
+                    voice_id,
+                    persona.name
+                )
+            else:
+                # Use ElevenLabs voice (need to generate audio first)
+                voice_id = persona.elevenlabs_voice_id if persona else None
+                audio_filename = f"{output_filename}_temp.mp3"
+                audio_path = workflow.voice_generator.generate_speech(
+                    input_data.text,
+                    audio_filename,
+                    None,
+                    voice_id
+                )
+                video_path = workflow.video_generator.generate_complete_video(
+                    audio_path,
+                    video_filename,
+                    avatar_id,
+                    persona.name
+                )
+        else:
+            # Generate video from audio file
+            if not os.path.exists(input_data.audio_path):
+                raise Exception(f"Audio file not found: {input_data.audio_path}")
+            
+            video_path = workflow.video_generator.generate_complete_video(
+                input_data.audio_path,
+                video_filename,
+                avatar_id,
+                persona.name
+            )
+        
+        results = {
+            "input_text": input_data.text,
+            "input_audio": input_data.audio_path,
+            "video_path": video_path,
+            "avatar_id": avatar_id,
+            "persona_id": input_data.persona_id,
+            "step": "video_generation"
+        }
+        
+        jobs[job_id].update({
+            "status": "completed",
+            "results": results,
+            "progress": "Video generation completed successfully"
+        })
+        
+    except Exception as e:
+        jobs[job_id].update({
+            "status": "failed",
+            "error": str(e),
+            "progress": "Video generation failed"
+        })
 
 @app.post("/process-file")
 async def process_file(
