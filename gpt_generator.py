@@ -71,18 +71,17 @@ Stay in character the entire time. Be witty, self-deluded, and entertaining."""
 
 Be sure to generate only the spoken words. Generate sentences that sound natural when spoken.
 Incorporate Punctuation Marks:
-* Hyphens (-): Separate syllables for clear pronunciation.
 * Commas (,): Create shorter breaks.
 * Periods (.): Introduce longer breaks with downward inflection.
 
-Write out numbers or use phonetic spelling for clarity. For example:
+Write out numbers and avoid abbreviations for clarity. For example:
 * "2012" becomes "twenty twelve."
 * "3/8" becomes "three eighths of an inch."
 * "01:18" becomes "one minute and eighteen seconds."
 * "10-19-2016" becomes "October nineteenth, two thousand sixteen."
 * "150th CT NE, Redmond, WA" becomes "150th Court Northeast, Redmond, Washington."
 
-Replace acronyms with their sounded-out versions, like "AI" (as "a-eye") or "AWS" (as "a-double you-s")
+Replace acronyms with their sounded-out versions, like "AI" (as "a-eye") or "AWS" (as "a-double you-s").
 """
         
         start_time = time.time()
@@ -150,18 +149,17 @@ Replace acronyms with their sounded-out versions, like "AI" (as "a-eye") or "AWS
 
 Be sure to generate only the spoken words. Generate sentences that sound natural when spoken.
 Incorporate Punctuation Marks:
-* Hyphens (-): Separate syllables for clear pronunciation.
 * Commas (,): Create shorter breaks.
 * Periods (.): Introduce longer breaks with downward inflection.
 
-Write out numbers or use phonetic spelling for clarity. For example:
+Write out numbers and avoid abbreviations for clarity. For example:
 * "2012" becomes "twenty twelve."
 * "3/8" becomes "three eighths of an inch."
 * "01:18" becomes "one minute and eighteen seconds."
 * "10-19-2016" becomes "October nineteenth, two thousand sixteen."
 * "150th CT NE, Redmond, WA" becomes "150th Court Northeast, Redmond, Washington."
 
-Replace acronyms with their sounded-out versions, like "AI" (as "a-eye") or "AWS" (as "a-double you-s")
+Replace acronyms with their sounded-out versions, like "AI" (as "a-eye") or "AWS" (as "a-double you-s").
 """
 
         start_time = time.time()

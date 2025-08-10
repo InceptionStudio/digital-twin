@@ -98,10 +98,16 @@ class ChadWorkflow:
             # Step 4: Generate video
             logger.info("Step 4: Generating video...")
             video_filename = f"{output_filename}.mp4"
+            
+            # Get persona name for video title
+            persona = persona_manager.get_persona(persona_id)
+            persona_name = persona.name if persona else None
+            
             video_path = self.video_generator.generate_complete_video(
                 audio_path,
                 video_filename,
-                avatar_id
+                avatar_id,
+                persona_name
             )
             results["video_path"] = video_path
             logger.info(f"Video generated: {video_path}")
@@ -241,11 +247,17 @@ class ChadWorkflow:
                 output_filename = f"chad_response_{int(start_time)}"
             
             video_filename = f"{output_filename}.mp4"
+            
+            # Get persona name for video title
+            persona = persona_manager.get_persona(persona_id)
+            persona_name = persona.name if persona else None
+            
             video_path = self.video_generator.generate_complete_video_from_text(
                 hot_take_result["hot_take"], 
                 video_filename, 
                 avatar_id,
-                voice_id
+                voice_id,
+                persona_name
             )
             results["video_path"] = video_path
             results["voice_id"] = voice_id or "default"
@@ -313,10 +325,16 @@ class ChadWorkflow:
             # Step 3: Generate video
             logger.info("Step 3: Generating video...")
             video_filename = f"{output_filename}.mp4"
+            
+            # Get persona name for video title
+            persona = persona_manager.get_persona(persona_id)
+            persona_name = persona.name if persona else None
+            
             video_path = self.video_generator.generate_complete_video(
                 audio_path,
                 video_filename,
-                avatar_id
+                avatar_id,
+                persona_name
             )
             results["video_path"] = video_path
             logger.info(f"Video generated: {video_path}")

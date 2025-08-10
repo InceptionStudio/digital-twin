@@ -18,5 +18,15 @@
     "heygen_voice_id": "test123",
     "heygen_avatar_id": null,
     "description": null
+  },
+  "sarah_guo": {
+    "name": "Sarah Guo",
+    "bio": "Founder of Conviction",
+    "prompt_file": "personas/prompts/sarah_guo.txt",
+    "image_file": null,
+    "elevenlabs_voice_id": "zqjPlH84bFLbo8q9PPo7",
+    "heygen_voice_id": "cb8c232f08a9466c870ad2c037fcf77a",
+    "heygen_avatar_id": "129fa3d48fad41e4975c4e9471d953fb",
+    "description": null
   }
 }

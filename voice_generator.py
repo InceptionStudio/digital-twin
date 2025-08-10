@@ -43,9 +43,9 @@ class VoiceGenerator:
         
         # Default voice settings optimized for Chad's personality
         default_settings = {
-            "stability": 0.75,
+            "stability": 0.49,
             "similarity_boost": 0.75,
-            "style": 0.8,  # Higher style for more expressive delivery
+            "style": 0.2,
             "use_speaker_boost": True
         }
         

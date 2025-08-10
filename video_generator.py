@@ -46,7 +46,8 @@ class VideoGenerator:
     def create_video_from_text(self, text: str, output_filename: Optional[str] = None,
                               talking_photo_id: Optional[str] = None,
                               voice_id: Optional[str] = None,
-                              background: Optional[str] = None) -> str:
+                              background: Optional[str] = None,
+                              persona_name: Optional[str] = None) -> str:
         """
         Create video from text using HeyGen Talking Photo V2 API.
         
@@ -72,9 +73,10 @@ class VideoGenerator:
         }
         
         # Video data according to HeyGen V2 API specification
+        title = f"{persona_name or 'Digital Twin'} Hot Take"
         video_data = {
             "caption": False,
-            "title": "Chad Goldstein Hot Take",
+            "title": title,
             "dimension": {
                 "width": 1280,
                 "height": 720
@@ -133,7 +135,8 @@ class VideoGenerator:
     
     def create_video_from_audio(self, audio_path: str, output_filename: Optional[str] = None,
                                talking_photo_id: Optional[str] = None,
-                               background: Optional[str] = None) -> str:
+                               background: Optional[str] = None,
+                               persona_name: Optional[str] = None) -> str:
         """
         Create video from audio file using HeyGen Talking Photo V2 API.
         
@@ -164,9 +167,10 @@ class VideoGenerator:
         }
         
         # Video data according to HeyGen V2 API specification
+        title = f"{persona_name or 'Digital Twin'} Hot Take"
         video_data = {
             "caption": False,
-            "title": "Chad Goldstein Hot Take",
+            "title": title,
             "dimension": {
                 "width": 1280,
                 "height": 720
@@ -353,7 +357,8 @@ class VideoGenerator:
             raise Exception(f"Failed to download video: {str(e)}")
     
     def generate_complete_video(self, audio_path: str, output_filename: Optional[str] = None,
-                               talking_photo_id: Optional[str] = None) -> str:
+                               talking_photo_id: Optional[str] = None,
+                               persona_name: Optional[str] = None) -> str:
         """
         Generate a complete video from audio file and download it.
         
@@ -366,7 +371,7 @@ class VideoGenerator:
             Path to the generated video file
         """
         # Create video from audio
-        video_id = self.create_video_from_audio(audio_path, output_filename, talking_photo_id)
+        video_id = self.create_video_from_audio(audio_path, output_filename, talking_photo_id, persona_name=persona_name)
         
         # Wait for completion
         final_status = self.wait_for_video_completion(video_id)
@@ -380,7 +385,8 @@ class VideoGenerator:
     
     def generate_complete_video_from_text(self, text: str, output_filename: Optional[str] = None,
                                          talking_photo_id: Optional[str] = None,
-                                         voice_id: Optional[str] = None) -> str:
+                                         voice_id: Optional[str] = None,
+                                         persona_name: Optional[str] = None) -> str:
         """
         Generate a complete video directly from text using HeyGen's voice synthesis.
         
@@ -394,7 +400,7 @@ class VideoGenerator:
             Path to the generated video file
         """
         # Create video from text
-        video_id = self.create_video_from_text(text, output_filename, talking_photo_id, voice_id)
+        video_id = self.create_video_from_text(text, output_filename, talking_photo_id, voice_id, persona_name=persona_name)
         
         # Wait for completion
         final_status = self.wait_for_video_completion(video_id)
