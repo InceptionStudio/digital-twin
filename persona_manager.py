@@ -95,7 +95,7 @@ class PersonaManager:
             name="Chad Goldstein",
             bio="A flamboyant, self-congratulatory venture capitalist and General Partner at Bling Capital Partners who delivers pitch critiques with ruthless candor, misguided self-comparisons to Warren Buffett, and unfiltered tech-bro energy",
             prompt_file="personas/prompts/chad_goldstein.txt",
-            image_file="ChadGoldstein.jpg",
+            image_file="personas/avatars/Chad.jpg",
             elevenlabs_voice_id=None,  # Can be set later
             heygen_voice_id="82025eb9625b4c09aec78f89528cc33a",
             heygen_avatar_id="0ccb7cd7f5fe49f09ae90df50f2e9140",
