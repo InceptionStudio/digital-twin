@@ -12,10 +12,12 @@ class Config:
     HEYGEN_API_KEY = os.getenv("HEYGEN_API_KEY")
     HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
     
-    # Voice and Avatar Settings
-    ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")  # Default voice
-    HEYGEN_AVATAR_ID = os.getenv("HEYGEN_AVATAR_ID")
-    HEYGEN_VOICE_ID = os.getenv("HEYGEN_VOICE_ID", "82025eb9625b4c09aec78f89528cc33a")  # Default HeyGen voice
+    # Default Voice IDs
+    DEFAULT_ELEVENLABS_VOICE_ID = "zqjPlH84bFLbo8q9PPo7" # Sarah Guo
+    DEFAULT_HEYGEN_VOICE_ID = "cb8c232f08a9466c870ad2c037fcf77a" # Sarah Guo
+    
+    # Default Avatar IDs
+    DEFAULT_HEYGEN_AVATAR_ID = "129fa3d48fad41e4975c4e9471d953fb" # Sarah Guo
     
     # File Settings
     MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "50"))

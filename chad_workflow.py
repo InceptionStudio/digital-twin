@@ -81,11 +81,16 @@ class ChadWorkflow:
             if not output_filename:
                 output_filename = f"chad_response_{int(start_time)}"
             
+            # Get persona's voice ID
+            persona = persona_manager.get_persona(persona_id)
+            voice_id = persona.elevenlabs_voice_id if persona else None
+            
             audio_filename = f"{output_filename}.mp3"
             audio_path = self.voice_generator.generate_speech(
                 hot_take_result["hot_take"], 
                 audio_filename, 
-                voice_settings
+                voice_settings,
+                voice_id
             )
             results["audio_path"] = audio_path
             logger.info(f"Audio generated: {audio_path}")
@@ -155,11 +160,16 @@ class ChadWorkflow:
             if not output_filename:
                 output_filename = f"chad_text_response_{int(start_time)}"
             
+            # Get persona's voice ID
+            persona = persona_manager.get_persona(persona_id)
+            voice_id = persona.elevenlabs_voice_id if persona else None
+            
             audio_filename = f"{output_filename}.mp3"
             audio_path = self.voice_generator.generate_speech(
                 hot_take_result["hot_take"], 
                 audio_filename, 
-                voice_settings
+                voice_settings,
+                voice_id
             )
             results["audio_path"] = audio_path
             logger.info(f"Audio generated: {audio_path}")
@@ -291,8 +301,12 @@ class ChadWorkflow:
             if not output_filename:
                 output_filename = f"chad_roast_{int(start_time)}"
             
+            # Get persona's voice ID
+            persona = persona_manager.get_persona(persona_id)
+            voice_id = persona.elevenlabs_voice_id if persona else None
+            
             audio_filename = f"{output_filename}.mp3"
-            audio_path = self.voice_generator.generate_speech_streaming(roast_result["roast"], audio_filename)
+            audio_path = self.voice_generator.generate_speech_streaming(roast_result["roast"], audio_filename, voice_id=voice_id)
             results["audio_path"] = audio_path
             logger.info(f"Audio generated: {audio_path}")
             

@@ -8,8 +8,8 @@ from config import Config
 class VideoGenerator:
     def __init__(self):
         self.api_key = Config.HEYGEN_API_KEY
-        self.talking_photo_id = Config.HEYGEN_AVATAR_ID  # Using avatar_id config for talking_photo_id
-        self.default_voice_id = Config.HEYGEN_VOICE_ID  # Default voice ID
+        self.talking_photo_id = Config.DEFAULT_HEYGEN_AVATAR_ID  # Using avatar_id config for talking_photo_id
+        self.default_voice_id = Config.DEFAULT_HEYGEN_VOICE_ID  # Default voice ID
         self.base_url = "https://api.heygen.com/v2"
         
         if not self.api_key:

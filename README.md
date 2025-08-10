@@ -32,11 +32,9 @@ OPENAI_API_KEY=your_openai_api_key_here
 
 # ElevenLabs API Configuration
 ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
-ELEVENLABS_VOICE_ID=your_preferred_voice_id_here
 
 # HeyGen API Configuration
 HEYGEN_API_KEY=your_heygen_api_key_here
-HEYGEN_AVATAR_ID=your_avatar_id_here
 
 # Application Configuration (optional)
 MAX_FILE_SIZE_MB=50

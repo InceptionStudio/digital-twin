@@ -7,7 +7,6 @@ from config import Config
 class VoiceGenerator:
     def __init__(self):
         self.api_key = Config.ELEVENLABS_API_KEY
-        self.voice_id = Config.ELEVENLABS_VOICE_ID
         
         if not self.api_key:
             raise ValueError("ElevenLabs API key not found in configuration")
@@ -24,7 +23,7 @@ class VoiceGenerator:
             raise Exception(f"Failed to fetch available voices: {str(e)}")
     
     def generate_speech(self, text: str, output_filename: Optional[str] = None, 
-                       voice_settings: Optional[Dict] = None) -> str:
+                       voice_settings: Optional[Dict] = None, voice_id: Optional[str] = None) -> str:
         """
         Generate speech from text using ElevenLabs API.
         
@@ -32,6 +31,7 @@ class VoiceGenerator:
             text: The text to convert to speech
             output_filename: Optional filename for the output audio file
             voice_settings: Optional voice settings (stability, similarity_boost, style)
+            voice_id: Optional ElevenLabs voice ID (if not provided, will use default)
         
         Returns:
             Path to the generated audio file
@@ -53,10 +53,13 @@ class VoiceGenerator:
             default_settings.update(voice_settings)
         
         try:
+            # Use provided voice_id or default to a common voice
+            voice_id_to_use = voice_id or Config.DEFAULT_ELEVENLABS_VOICE_ID
+            
             # Generate speech using the ElevenLabs SDK
             audio_stream = self.client.text_to_speech.convert(
                 text=text,
-                voice_id=self.voice_id,
+                voice_id=voice_id_to_use,
                 model_id="eleven_multilingual_v2",
                 output_format="mp3_44100_128",
                 voice_settings=default_settings
@@ -73,7 +76,7 @@ class VoiceGenerator:
             raise Exception(f"Failed to generate speech: {str(e)}")
     
     def generate_speech_streaming(self, text: str, output_filename: Optional[str] = None,
-                                voice_settings: Optional[Dict] = None) -> str:
+                                voice_settings: Optional[Dict] = None, voice_id: Optional[str] = None) -> str:
         """
         Generate speech using the ElevenLabs SDK (same as regular method for now).
         """
@@ -93,10 +96,13 @@ class VoiceGenerator:
             default_settings.update(voice_settings)
         
         try:
+            # Use provided voice_id or default to a common voice
+            voice_id_to_use = voice_id or Config.DEFAULT_ELEVENLABS_VOICE_ID
+            
             # Generate speech using the ElevenLabs SDK
             audio_stream = self.client.text_to_speech.convert(
                 text=text,
-                voice_id=self.voice_id,
+                voice_id=voice_id_to_use,
                 model_id="eleven_multilingual_v2",
                 output_format="mp3_44100_128",
                 voice_settings=default_settings
@@ -122,7 +128,7 @@ class VoiceGenerator:
     
     def get_voice_info(self, voice_id: Optional[str] = None) -> Dict[str, Any]:
         """Get information about a specific voice."""
-        target_voice_id = voice_id or self.voice_id
+        target_voice_id = voice_id or Config.DEFAULT_ELEVENLABS_VOICE_ID
         
         try:
             voice_info = self.client.voices.get(voice_id=target_voice_id)
