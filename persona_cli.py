@@ -113,7 +113,7 @@ def add_persona():
         print("❌ Bio is required.")
         return
     
-    prompt_file = input("Prompt file path (e.g., 'chadprompt.txt'): ").strip()
+    prompt_file = input("Prompt file path (e.g., 'personas/prompts/chad_goldstein.txt'): ").strip()
     if not prompt_file:
         print("❌ Prompt file is required.")
         return

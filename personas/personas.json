@@ -2,7 +2,7 @@
   "chad_goldstein": {
     "name": "Chad Goldstein",
     "bio": "A flamboyant, self-congratulatory venture capitalist and General Partner at Bling Capital Partners who delivers pitch critiques with ruthless candor, misguided self-comparisons to Warren Buffett, and unfiltered tech-bro energy",
-    "prompt_file": "chadprompt.txt",
+    "prompt_file": "personas/prompts/chad_goldstein.txt",
     "image_file": "ChadGoldstein.jpg",
     "elevenlabs_voice_id": null,
     "heygen_voice_id": "82025eb9625b4c09aec78f89528cc33a",

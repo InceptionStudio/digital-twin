@@ -20,17 +20,23 @@ class HotTakeGenerator:
     def _load_chad_prompt(self) -> str:
         """Load the Chad Goldstein character prompt from file."""
         try:
-            with open("chadprompt.txt", "r", encoding="utf-8") as f:
+            # Try to get Chad's prompt from persona manager first
+            prompt_content = persona_manager.get_prompt_content("chad_goldstein")
+            if prompt_content:
+                return prompt_content
+            
+            # Fallback to direct file read
+            with open("personas/prompts/chad_goldstein.txt", "r", encoding="utf-8") as f:
                 prompt = f.read().strip()
                 if not prompt:
-                    print("⚠️  WARNING: chadprompt.txt file is empty!")
+                    print("⚠️  WARNING: personas/prompts/chad_goldstein.txt file is empty!")
                     return self._get_fallback_prompt()
                 return prompt
         except FileNotFoundError:
-            print("⚠️  WARNING: chadprompt.txt file not found! Using fallback prompt.")
+            print("⚠️  WARNING: personas/prompts/chad_goldstein.txt file not found! Using fallback prompt.")
             return self._get_fallback_prompt()
         except Exception as e:
-            print(f"⚠️  WARNING: Error loading chadprompt.txt: {str(e)}. Using fallback prompt.")
+            print(f"⚠️  WARNING: Error loading personas/prompts/chad_goldstein.txt: {str(e)}. Using fallback prompt.")
             return self._get_fallback_prompt()
     
     def _get_fallback_prompt(self) -> str:

@@ -88,11 +88,11 @@ class PersonaManager:
         chad_persona = Persona(
             name="Chad Goldstein",
             bio="A flamboyant, self-congratulatory venture capitalist and General Partner at Bling Capital Partners who delivers pitch critiques with ruthless candor, misguided self-comparisons to Warren Buffett, and unfiltered tech-bro energy",
-            prompt_file="chadprompt.txt",
+            prompt_file="personas/prompts/chad_goldstein.txt",
             image_file="ChadGoldstein.jpg",
             elevenlabs_voice_id=None,  # Can be set later
             heygen_voice_id="82025eb9625b4c09aec78f89528cc33a",
-            heygen_avatar_id="129fa3d48fad41e4975c4e9471d953fb",
+            heygen_avatar_id="0ccb7cd7f5fe49f09ae90df50f2e9140",
             description="The original hot take commentator with a distinctive voice and style - like Kevin O'Leary from Shark Tank, but with one exit, three podcasts, and a six-figure LinkedIn following"
         )
         
