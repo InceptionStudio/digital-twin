@@ -1,5 +1,5 @@
 openai>=1.99.2
-elevenlabs>=0.2.0
+elevenlabs>=1.0.0
 requests>=2.31.0
 python-dotenv>=1.0.0
 pydub>=0.25.1

@@ -1,29 +1,25 @@
-import requests
 import os
 from pathlib import Path
 from typing import Optional, Dict, Any
+from elevenlabs import ElevenLabs
 from config import Config
 
 class VoiceGenerator:
     def __init__(self):
         self.api_key = Config.ELEVENLABS_API_KEY
         self.voice_id = Config.ELEVENLABS_VOICE_ID
-        self.base_url = "https://api.elevenlabs.io/v1"
         
         if not self.api_key:
             raise ValueError("ElevenLabs API key not found in configuration")
+        
+        # Initialize ElevenLabs client
+        self.client = ElevenLabs(api_key=self.api_key)
     
     def get_available_voices(self) -> Dict[str, Any]:
         """Get list of available voices from ElevenLabs."""
-        headers = {
-            "Accept": "application/json",
-            "xi-api-key": self.api_key
-        }
-        
         try:
-            response = requests.get(f"{self.base_url}/voices", headers=headers)
-            response.raise_for_status()
-            return response.json()
+            voices = self.client.voices.get_all()
+            return {"voices": voices}
         except Exception as e:
             raise Exception(f"Failed to fetch available voices: {str(e)}")
     
@@ -56,37 +52,30 @@ class VoiceGenerator:
         if voice_settings:
             default_settings.update(voice_settings)
         
-        url = f"{self.base_url}/text-to-speech/{self.voice_id}"
-        
-        headers = {
-            "Accept": "audio/mpeg",
-            "Content-Type": "application/json",
-            "xi-api-key": self.api_key
-        }
-        
-        data = {
-            "text": text,
-            "model_id": "eleven_multilingual_v2",  # Use the latest multilingual model
-            "voice_settings": default_settings
-        }
-        
         try:
-            response = requests.post(url, json=data, headers=headers)
-            response.raise_for_status()
+            # Generate speech using the ElevenLabs SDK
+            audio_stream = self.client.text_to_speech.convert(
+                text=text,
+                voice_id=self.voice_id,
+                model_id="eleven_multilingual_v2",
+                output_format="mp3_44100_128",
+                voice_settings=default_settings
+            )
             
-            # Save the audio file
+            # Save the audio file by consuming the generator
             with open(output_path, 'wb') as f:
-                f.write(response.content)
+                for chunk in audio_stream:
+                    f.write(chunk)
             
             return str(output_path)
             
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             raise Exception(f"Failed to generate speech: {str(e)}")
     
     def generate_speech_streaming(self, text: str, output_filename: Optional[str] = None,
                                 voice_settings: Optional[Dict] = None) -> str:
         """
-        Generate speech using streaming for faster response (good for real-time applications).
+        Generate speech using the ElevenLabs SDK (same as regular method for now).
         """
         if not output_filename:
             output_filename = f"chad_response_stream_{hash(text) % 10000}.mp3"
@@ -103,33 +92,25 @@ class VoiceGenerator:
         if voice_settings:
             default_settings.update(voice_settings)
         
-        url = f"{self.base_url}/text-to-speech/{self.voice_id}/stream"
-        
-        headers = {
-            "Accept": "audio/mpeg",
-            "Content-Type": "application/json",
-            "xi-api-key": self.api_key
-        }
-        
-        data = {
-            "text": text,
-            "model_id": "eleven_multilingual_v2",
-            "voice_settings": default_settings
-        }
-        
         try:
-            response = requests.post(url, json=data, headers=headers, stream=True)
-            response.raise_for_status()
+            # Generate speech using the ElevenLabs SDK
+            audio_stream = self.client.text_to_speech.convert(
+                text=text,
+                voice_id=self.voice_id,
+                model_id="eleven_multilingual_v2",
+                output_format="mp3_44100_128",
+                voice_settings=default_settings
+            )
             
+            # Save the audio file by consuming the generator
             with open(output_path, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=1024):
-                    if chunk:
-                        f.write(chunk)
+                for chunk in audio_stream:
+                    f.write(chunk)
             
             return str(output_path)
             
-        except requests.exceptions.RequestException as e:
-            raise Exception(f"Failed to generate streaming speech: {str(e)}")
+        except Exception as e:
+            raise Exception(f"Failed to generate speech: {str(e)}")
     
     def test_connection(self) -> bool:
         """Test the ElevenLabs API connection."""
@@ -143,15 +124,9 @@ class VoiceGenerator:
         """Get information about a specific voice."""
         target_voice_id = voice_id or self.voice_id
         
-        headers = {
-            "Accept": "application/json",
-            "xi-api-key": self.api_key
-        }
-        
         try:
-            response = requests.get(f"{self.base_url}/voices/{target_voice_id}", headers=headers)
-            response.raise_for_status()
-            return response.json()
+            voice_info = self.client.voices.get(voice_id=target_voice_id)
+            return voice_info
         except Exception as e:
             raise Exception(f"Failed to get voice info: {str(e)}")
     
