@@ -99,14 +99,15 @@ class ChadWorkflow:
             logger.info("Step 4: Generating video...")
             video_filename = f"{output_filename}.mp4"
             
-            # Get persona name for video title
+            # Get persona details for video generation
             persona = persona_manager.get_persona(persona_id)
             persona_name = persona.name if persona else None
+            talking_photo_id = avatar_id or (persona.heygen_avatar_id if persona else None)
             
             video_path = self.video_generator.generate_complete_video(
                 audio_path,
                 video_filename,
-                avatar_id,
+                talking_photo_id,
                 persona_name
             )
             results["video_path"] = video_path
@@ -183,10 +184,15 @@ class ChadWorkflow:
             # Step 3: Generate video
             logger.info("Step 3: Generating video...")
             video_filename = f"{output_filename}.mp4"
+            
+            # Get persona details for video generation
+            persona = persona_manager.get_persona(persona_id)
+            talking_photo_id = avatar_id or (persona.heygen_avatar_id if persona else None)
+            
             video_path = self.video_generator.generate_complete_video(
                 audio_path,
                 video_filename,
-                avatar_id
+                talking_photo_id
             )
             results["video_path"] = video_path
             logger.info(f"Video generated: {video_path}")
@@ -248,15 +254,17 @@ class ChadWorkflow:
             
             video_filename = f"{output_filename}.mp4"
             
-            # Get persona name for video title
+            # Get persona details for video generation
             persona = persona_manager.get_persona(persona_id)
             persona_name = persona.name if persona else None
+            talking_photo_id = avatar_id or (persona.heygen_avatar_id if persona else None)
+            target_voice_id = voice_id or (persona.heygen_voice_id if persona else None)
             
             video_path = self.video_generator.generate_complete_video_from_text(
                 hot_take_result["hot_take"], 
                 video_filename, 
-                avatar_id,
-                voice_id,
+                talking_photo_id,
+                target_voice_id,
                 persona_name
             )
             results["video_path"] = video_path
@@ -326,14 +334,15 @@ class ChadWorkflow:
             logger.info("Step 3: Generating video...")
             video_filename = f"{output_filename}.mp4"
             
-            # Get persona name for video title
+            # Get persona details for video generation
             persona = persona_manager.get_persona(persona_id)
             persona_name = persona.name if persona else None
+            talking_photo_id = avatar_id or (persona.heygen_avatar_id if persona else None)
             
             video_path = self.video_generator.generate_complete_video(
                 audio_path,
                 video_filename,
-                avatar_id,
+                talking_photo_id,
                 persona_name
             )
             results["video_path"] = video_path
