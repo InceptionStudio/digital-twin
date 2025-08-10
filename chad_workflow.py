@@ -169,33 +169,61 @@ class ChadWorkflow:
             
             # Get persona's voice ID
             persona = persona_manager.get_persona(persona_id)
-            voice_id = persona.elevenlabs_voice_id if persona else None
+            elevenlabs_voice_id = persona.elevenlabs_voice_id if persona else None
             
-            audio_filename = f"{output_filename}.mp3"
-            audio_path = self.voice_generator.generate_speech(
-                hot_take_result["hot_take"], 
-                audio_filename, 
-                voice_settings,
-                voice_id
-            )
-            results["audio_path"] = audio_path
-            logger.info(f"Audio generated: {audio_path}")
-            
-            # Step 3: Generate video
-            logger.info("Step 3: Generating video...")
-            video_filename = f"{output_filename}.mp4"
-            
-            # Get persona details for video generation
-            persona = persona_manager.get_persona(persona_id)
-            talking_photo_id = avatar_id or (persona.heygen_avatar_id if persona else None)
-            
-            video_path = self.video_generator.generate_complete_video(
-                audio_path,
-                video_filename,
-                talking_photo_id
-            )
-            results["video_path"] = video_path
-            logger.info(f"Video generated: {video_path}")
+            # Check if persona has ElevenLabs voice ID, if not, use HeyGen voice
+            if elevenlabs_voice_id is None:
+                logger.info("No ElevenLabs voice ID found for persona, using HeyGen voice instead")
+                results["voice_provider"] = "heygen"
+                
+                # Generate video directly from text using HeyGen's voice
+                video_filename = f"{output_filename}.mp4"
+                
+                # Get persona details for video generation
+                persona_name = persona.name if persona else None
+                talking_photo_id = avatar_id or (persona.heygen_avatar_id if persona else None)
+                target_voice_id = persona.heygen_voice_id if persona else None
+                
+                video_path = self.video_generator.generate_complete_video_from_text(
+                    hot_take_result["hot_take"], 
+                    video_filename, 
+                    talking_photo_id,
+                    target_voice_id,
+                    persona_name
+                )
+                results["video_path"] = video_path
+                results["voice_id"] = target_voice_id or "default"
+                logger.info(f"Video generated with HeyGen voice: {video_path}")
+            else:
+                # Use ElevenLabs voice
+                results["voice_provider"] = "elevenlabs"
+                
+                audio_filename = f"{output_filename}.mp3"
+                audio_path = self.voice_generator.generate_speech(
+                    hot_take_result["hot_take"], 
+                    audio_filename, 
+                    voice_settings,
+                    elevenlabs_voice_id
+                )
+                results["audio_path"] = audio_path
+                logger.info(f"Audio generated: {audio_path}")
+                
+                # Step 3: Generate video
+                logger.info("Step 3: Generating video...")
+                video_filename = f"{output_filename}.mp4"
+                
+                # Get persona details for video generation
+                persona_name = persona.name if persona else None
+                talking_photo_id = avatar_id or (persona.heygen_avatar_id if persona else None)
+                
+                video_path = self.video_generator.generate_complete_video(
+                    audio_path,
+                    video_filename,
+                    talking_photo_id,
+                    persona_name
+                )
+                results["video_path"] = video_path
+                logger.info(f"Video generated: {video_path}")
             
             # Final results
             results["status"] = "completed"
@@ -323,30 +351,56 @@ class ChadWorkflow:
             
             # Get persona's voice ID
             persona = persona_manager.get_persona(persona_id)
-            voice_id = persona.elevenlabs_voice_id if persona else None
+            elevenlabs_voice_id = persona.elevenlabs_voice_id if persona else None
             
-            audio_filename = f"{output_filename}.mp3"
-            audio_path = self.voice_generator.generate_speech_streaming(roast_result["roast"], audio_filename, voice_id=voice_id)
-            results["audio_path"] = audio_path
-            logger.info(f"Audio generated: {audio_path}")
-            
-            # Step 3: Generate video
-            logger.info("Step 3: Generating video...")
-            video_filename = f"{output_filename}.mp4"
-            
-            # Get persona details for video generation
-            persona = persona_manager.get_persona(persona_id)
-            persona_name = persona.name if persona else None
-            talking_photo_id = avatar_id or (persona.heygen_avatar_id if persona else None)
-            
-            video_path = self.video_generator.generate_complete_video(
-                audio_path,
-                video_filename,
-                talking_photo_id,
-                persona_name
-            )
-            results["video_path"] = video_path
-            logger.info(f"Video generated: {video_path}")
+            # Check if persona has ElevenLabs voice ID, if not, use HeyGen voice
+            if elevenlabs_voice_id is None:
+                logger.info("No ElevenLabs voice ID found for persona, using HeyGen voice instead")
+                results["voice_provider"] = "heygen"
+                
+                # Generate video directly from text using HeyGen's voice
+                video_filename = f"{output_filename}.mp4"
+                
+                # Get persona details for video generation
+                persona_name = persona.name if persona else None
+                talking_photo_id = avatar_id or (persona.heygen_avatar_id if persona else None)
+                target_voice_id = persona.heygen_voice_id if persona else None
+                
+                video_path = self.video_generator.generate_complete_video_from_text(
+                    roast_result["roast"], 
+                    video_filename, 
+                    talking_photo_id,
+                    target_voice_id,
+                    persona_name
+                )
+                results["video_path"] = video_path
+                results["voice_id"] = target_voice_id or "default"
+                logger.info(f"Video generated with HeyGen voice: {video_path}")
+            else:
+                # Use ElevenLabs voice
+                results["voice_provider"] = "elevenlabs"
+                
+                audio_filename = f"{output_filename}.mp3"
+                audio_path = self.voice_generator.generate_speech_streaming(roast_result["roast"], audio_filename, voice_id=elevenlabs_voice_id)
+                results["audio_path"] = audio_path
+                logger.info(f"Audio generated: {audio_path}")
+                
+                # Step 3: Generate video
+                logger.info("Step 3: Generating video...")
+                video_filename = f"{output_filename}.mp4"
+                
+                # Get persona details for video generation
+                persona_name = persona.name if persona else None
+                talking_photo_id = avatar_id or (persona.heygen_avatar_id if persona else None)
+                
+                video_path = self.video_generator.generate_complete_video(
+                    audio_path,
+                    video_filename,
+                    talking_photo_id,
+                    persona_name
+                )
+                results["video_path"] = video_path
+                logger.info(f"Video generated: {video_path}")
             
             # Final results
             results["status"] = "completed"
