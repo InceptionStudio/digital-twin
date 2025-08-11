@@ -36,4 +36,4 @@ RUN mkdir -p temp output personas/prompts
 EXPOSE 8000 
 
 # Default command with hot reload enabled
-CMD ["python", "-Xfrozen_modules=off", "-m", "uvicorn", "web_api:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app"]
+CMD ["python", "-Xfrozen_modules=off", "-m", "uvicorn", "web_api:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app", "--workers", "4"]

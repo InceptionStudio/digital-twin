@@ -102,7 +102,12 @@ def process_file_job(job_id, file_path, context, persona_id):
         context=context,
         persona_id=persona_id
     )
-    jobs[job_id] = results
+    # Store results in shared job storage
+    job_storage.update_job(job_id, {
+        "status": "completed",
+        "results": results,
+        "progress": "Processing completed successfully"
+    })
 ```
 
 #### 2. `/process-text` - Text Input Processing
@@ -307,26 +312,32 @@ Created → Processing → Completed/Failed
 ### Job Status Tracking
 
 ```python
-jobs = {}  # In-memory job storage
+# Shared job storage (Redis for production, in-memory for development)
+from job_storage import create_job_storage
 
-def create_job(job_type):
-    job_id = str(uuid.uuid4())
-    jobs[job_id] = {
-        "status": "processing",
-        "type": job_type,
-        "created_at": time.time(),
-        "results": None,
-        "error": None
-    }
-    return job_id
+# Initialize job storage based on configuration
+job_storage = create_job_storage(
+    storage_type=os.getenv("JOB_STORAGE", "memory"),
+    redis_url=os.getenv("REDIS_URL", "redis://localhost:6379"),
+    workers=int(os.getenv("WORKERS", "1"))
+)
 
-def update_job(job_id, status, results=None, error=None):
-    if job_id in jobs:
-        jobs[job_id]["status"] = status
-        jobs[job_id]["results"] = results
-        jobs[job_id]["error"] = error
-        jobs[job_id]["completed_at"] = time.time()
+def create_job(job_data):
+    """Create a new job and return its ID"""
+    return job_storage.create_job(job_data)
+
+def update_job(job_id, updates):
+    """Update job with new data"""
+    return job_storage.update_job(job_id, updates)
+
+def get_job(job_id):
+    """Retrieve job by ID"""
+    return job_storage.get_job(job_id)
 ```
+
+**Job Storage Types:**
+- **In-memory**: Single worker development
+- **Redis**: Multi-worker production (required for workers > 1)
 
 ## Error Handling
 
@@ -350,6 +361,12 @@ Service Error → Workflow Exception → API Error Response → Client
 3. **Resource Errors**
    - Job not found → 404 Not Found
    - File not found → 404 Not Found
+   - Job storage not initialized → 500 Internal Server Error
+
+4. **Job Storage Errors**
+   - Redis connection failed → 500 Internal Server Error
+   - In-memory storage with multiple workers → 500 Internal Server Error
+   - Job storage not available → 500 Internal Server Error
 
 ## Performance Optimizations
 
@@ -379,6 +396,46 @@ OUTPUT_DIR = "./output"
 cleanup_old_files(max_age_hours=24)
 ```
 
+### 4. Shared Job Storage
+```python
+# Redis-based job storage enables:
+# - Multiple worker processes
+# - Job persistence across restarts
+# - Distributed job tracking
+# - Automatic cleanup of old jobs
+
+job_storage.cleanup_old_jobs(max_age_hours=24)
+```
+
+## Application Startup
+
+### Startup Sequence
+```python
+@app.on_event("startup")
+async def startup_event():
+    """Initialize the workflow on startup."""
+    global workflow, job_storage
+    
+    # 1. Reload personas
+    persona_manager.reload_personas()
+    
+    # 2. Initialize job storage
+    storage_type = os.getenv("JOB_STORAGE", "memory")
+    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
+    workers = int(os.getenv("WORKERS", "1"))
+    
+    job_storage = create_job_storage(storage_type, redis_url, workers)
+    
+    # 3. Initialize workflow
+    workflow = ChadWorkflow()
+```
+
+### Startup Validation
+- Persona configuration loading
+- Job storage connection test
+- Workflow component initialization
+- Service API key validation
+
 ## Service Integration Details
 
 ### OpenAI Integration
@@ -398,6 +455,46 @@ cleanup_old_files(max_age_hours=24)
 - **Purpose**: Generate talking avatar videos
 - **Processing**: Async with polling (2-10 minutes)
 - **Formats**: MP4 output, various avatar styles
+
+## Job Storage Configuration
+
+### Environment Variables
+```bash
+# Job storage type (memory or redis)
+JOB_STORAGE=redis
+
+# Redis connection URL (required when JOB_STORAGE=redis)
+REDIS_URL=redis://localhost:6379
+
+# Number of workers (affects storage requirements)
+WORKERS=4
+```
+
+### Storage Requirements
+- **Single Worker**: In-memory storage is sufficient
+- **Multiple Workers**: Redis is required for shared job state
+- **Production**: Always use Redis for reliability and scalability
+
+### Redis Setup
+```bash
+# Option 1: Docker
+docker run -d --name redis -p 6379:6379 redis:7-alpine
+
+# Option 2: Homebrew (macOS)
+brew install redis
+redis-server
+
+# Option 3: Docker Compose (includes Redis)
+docker-compose up
+```
+
+### Job Storage Safety
+The system includes safety checks to prevent in-memory storage with multiple workers:
+```python
+# This will raise an error if workers > 1 and storage_type = "memory"
+job_storage = create_job_storage("memory", workers=4)
+# ValueError: Cannot use in-memory job storage with 4 workers
+```
 
 ## Docker Deployment
 

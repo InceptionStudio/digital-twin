@@ -303,14 +303,14 @@ class VideoGenerator:
             raise Exception(f"Failed to get video status: {str(e)}")
     
     def wait_for_video_completion(self, video_id: str, max_wait_time: int = 1200,
-                                 check_interval: int = 10) -> Dict[str, Any]:
+                                 check_interval: int = 2) -> Dict[str, Any]:
         """
         Wait for video generation to complete.
         
         Args:
             video_id: The video ID to check
             max_wait_time: Maximum time to wait in seconds (default: 1200)
-            check_interval: How often to check status in seconds (default: 10)
+            check_interval: How often to check status in seconds (default: 2)
         
         Returns:
             Final video status
