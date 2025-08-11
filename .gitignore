@@ -37,7 +37,6 @@ extracted_audio_*
 chad_response_*
 chad_video_*
 chad_roast_*
-job_*
 
 # Python
 __pycache__/
@@ -225,7 +224,6 @@ Thumbs.db
 *.old
 
 # Test files
-test_*.py
 *_test.py
 tests/temp/
 tests/output/
