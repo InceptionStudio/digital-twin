@@ -111,7 +111,7 @@ async def startup_event():
         
         # Initialize job storage
         storage_type = os.getenv("JOB_STORAGE", "memory")
-        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
+        redis_url = os.getenv("REDIS_URL", "redis://redis:6379")
         
         # Get worker count from environment or default to 1
         workers = int(os.getenv("WORKERS", "1"))

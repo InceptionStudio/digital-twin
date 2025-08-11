@@ -318,7 +318,7 @@ from job_storage import create_job_storage
 # Initialize job storage based on configuration
 job_storage = create_job_storage(
     storage_type=os.getenv("JOB_STORAGE", "memory"),
-    redis_url=os.getenv("REDIS_URL", "redis://localhost:6379"),
+    redis_url=os.getenv("REDIS_URL", "redis://redis:6379"),
     workers=int(os.getenv("WORKERS", "1"))
 )
 
@@ -421,7 +421,7 @@ async def startup_event():
     
     # 2. Initialize job storage
     storage_type = os.getenv("JOB_STORAGE", "memory")
-    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
+    redis_url = os.getenv("REDIS_URL", "redis://redis:6379")
     workers = int(os.getenv("WORKERS", "1"))
     
     job_storage = create_job_storage(storage_type, redis_url, workers)
@@ -464,7 +464,7 @@ async def startup_event():
 JOB_STORAGE=redis
 
 # Redis connection URL (required when JOB_STORAGE=redis)
-REDIS_URL=redis://localhost:6379
+REDIS_URL=redis://redis:6379
 
 # Number of workers (affects storage requirements)
 WORKERS=4
@@ -477,14 +477,7 @@ WORKERS=4
 
 ### Redis Setup
 ```bash
-# Option 1: Docker
-docker run -d --name redis -p 6379:6379 redis:7-alpine
-
-# Option 2: Homebrew (macOS)
-brew install redis
-redis-server
-
-# Option 3: Docker Compose (includes Redis)
+# Redis is only supported via docker-compose
 docker-compose up
 ```
 
@@ -493,7 +486,7 @@ The system includes safety checks to prevent in-memory storage with multiple wor
 ```python
 # This will raise an error if workers > 1 and storage_type = "memory"
 job_storage = create_job_storage("memory", workers=4)
-# ValueError: Cannot use in-memory job storage with 4 workers
+# ValueError: Cannot use in-memory job storage with 4 workers. Set JOB_STORAGE=redis and ensure Redis is running via docker-compose.
 ```
 
 ## Docker Deployment

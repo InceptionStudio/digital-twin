@@ -347,21 +347,14 @@ python persona_cli.py validate chad_goldstein
 ```
 
 **Redis/Job Storage Issues**:
-- Multiple workers require Redis: `JOB_STORAGE=redis REDIS_URL=redis://localhost:6379`
-- Install Redis:
+- Multiple workers require Redis: `JOB_STORAGE=redis REDIS_URL=redis://redis:6379`
+- Redis is only supported via docker-compose:
   ```bash
-  # Option 1: Homebrew (macOS)
-  brew install redis
-  
-  # Option 2: Docker
-  docker run -d --name redis -p 6379:6379 redis:7-alpine
-  
-  # Option 3: Docker Compose (includes Redis)
+  # Start Redis and API together
   docker-compose up
   ```
-- Start Redis: `redis-server` (if installed via Homebrew)
-- Check Redis connection: `redis-cli ping`
 - Job storage errors: Check Redis logs and connection settings
+- Ensure Redis service is healthy in docker-compose
 
 **Cleanup Old Files**:
 ```bash
@@ -382,24 +375,17 @@ uvicorn web_api:app --reload --host 0.0.0.0 --port 8000
 
 **Start production API with multiple workers**:
 ```bash
-# Option 1: Use the production script (requires Redis)
-JOB_STORAGE=redis REDIS_URL=redis://localhost:6379 python start_server.py
-
-# Option 1a: Auto-setup Redis first
-python setup_redis.py
-JOB_STORAGE=redis REDIS_URL=redis://localhost:6379 python start_server.py
-
-# Option 2: Manual configuration (requires Redis)
-JOB_STORAGE=redis REDIS_URL=redis://localhost:6379 uvicorn web_api:app --host 0.0.0.0 --port 8000 --workers 4
-
-# Option 3: Environment-based configuration (requires Redis)
-JOB_STORAGE=redis REDIS_URL=redis://localhost:6379 WORKERS=6 python start_server.py
-
-# Option 4: Docker Compose (includes Redis)
+# Option 1: Docker Compose (recommended - includes Redis)
 docker-compose up
+
+# Option 2: Single worker with in-memory storage (development only)
+python start_server.py
+
+# Option 3: Manual configuration (requires Redis)
+JOB_STORAGE=redis REDIS_URL=redis://redis:6379 uvicorn web_api:app --host 0.0.0.0 --port 8000 --workers 4
 ```
 
-**⚠️ Important**: Multiple workers require Redis for job storage. In-memory storage is only allowed with single worker.
+**⚠️ Important**: Multiple workers require Redis for job storage. Redis is only supported via docker-compose. In-memory storage is only allowed with single worker.
 
 **Add example personas**:
 ```bash

@@ -88,7 +88,7 @@ class InMemoryJobStorage(JobStorage):
 class RedisJobStorage(JobStorage):
     """Redis-based job storage (for production/multiple workers)"""
     
-    def __init__(self, redis_url: str = "redis://localhost:6379"):
+    def __init__(self, redis_url: str = "redis://redis:6379"):
         try:
             import redis
             self.redis = redis.from_url(redis_url, decode_responses=True)
@@ -177,7 +177,7 @@ class RedisJobStorage(JobStorage):
         return deleted_count
 
 # Factory function to create appropriate storage
-def create_job_storage(storage_type: str = "memory", redis_url: str = "redis://localhost:6379", workers: int = 1) -> JobStorage:
+def create_job_storage(storage_type: str = "memory", redis_url: str = "redis://redis:6379", workers: int = 1) -> JobStorage:
     """Create job storage based on configuration"""
     
     # Safety check: Never allow in-memory storage with multiple workers
@@ -191,15 +191,12 @@ def create_job_storage(storage_type: str = "memory", redis_url: str = "redis://l
         try:
             return RedisJobStorage(redis_url)
         except Exception as e:
-            if workers > 1:
-                # Don't fall back to in-memory for multiple workers
-                raise RuntimeError(
-                    f"Failed to initialize Redis storage with {workers} workers: {e}. "
-                    "Redis is required for multiple workers."
-                )
-            else:
-                logger.warning(f"Failed to initialize Redis storage: {e}. Falling back to in-memory storage.")
-                return InMemoryJobStorage()
+            # Fail if Redis is not available
+            raise RuntimeError(
+                f"Failed to initialize Redis storage: {e}. "
+                "Redis is required when JOB_STORAGE=redis. "
+                "Ensure Redis is running via docker-compose."
+            )
     else:
         if workers > 1:
             raise ValueError(

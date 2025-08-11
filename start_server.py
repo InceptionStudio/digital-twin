@@ -32,12 +32,13 @@ def start_server():
         job_storage = os.getenv("JOB_STORAGE", "memory")
         if job_storage == "memory":
             print("❌ ERROR: Cannot use in-memory job storage with multiple workers!")
-            print("   Set JOB_STORAGE=redis and ensure Redis is running.")
-            print("   Example: JOB_STORAGE=redis REDIS_URL=redis://localhost:6379 python start_server.py")
+            print("   Set JOB_STORAGE=redis and ensure Redis is running via docker-compose.")
+            print("   Example: docker-compose up")
             exit(1)
         
-        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
+        redis_url = os.getenv("REDIS_URL", "redis://redis:6379")
         print(f"🔗 Using Redis for job storage: {redis_url}")
+        print("   Ensure Redis is running via docker-compose: docker-compose up")
     
     # Start uvicorn with production settings
     uvicorn.run(
