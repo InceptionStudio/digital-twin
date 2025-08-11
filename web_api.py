@@ -11,12 +11,14 @@ from typing import Optional, Dict, Any, List
 import tempfile
 import os
 import uuid
+import asyncio
 from pathlib import Path
 import logging
 
 from chad_workflow import ChadWorkflow
 from config import Config
 from persona_manager import persona_manager
+from job_storage import create_job_storage
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -96,16 +98,25 @@ class PersonaInfo(BaseModel):
     description: Optional[str] = None
     configurations: Dict[str, bool]
 
-# In-memory job storage (use Redis or database in production)
-jobs: Dict[str, Dict[str, Any]] = {}
+# Job storage (shared across workers)
+job_storage = None
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize the workflow on startup."""
-    global workflow
+    global workflow, job_storage
     try:
         # Force reload personas to ensure fresh data
         persona_manager.reload_personas()
+        
+        # Initialize job storage
+        storage_type = os.getenv("JOB_STORAGE", "memory")
+        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
+        
+        # Get worker count from environment or default to 1
+        workers = int(os.getenv("WORKERS", "1"))
+        
+        job_storage = create_job_storage(storage_type, redis_url, workers)
         
         workflow = ChadWorkflow()
         logger.info("Digital Twin Workflow initialized successfully")
@@ -211,15 +222,14 @@ async def generate_text(
     if not persona:
         raise HTTPException(status_code=400, detail=f"Persona '{input_data.persona_id}' not found")
     
-    job_id = str(uuid.uuid4())
-    
-    # Initialize job
-    jobs[job_id] = {
+    # Create job using shared storage
+    job_data = {
         "status": "processing",
         "progress": f"Generating text response with {persona.name}...",
         "persona_id": input_data.persona_id,
         "step": "text_generation"
     }
+    job_id = job_storage.create_job(job_data)
     
     # Start background processing
     background_tasks.add_task(
@@ -238,8 +248,13 @@ async def generate_text(
 async def generate_text_background(job_id: str, input_data: GenerateTextInput):
     """Background task for text generation."""
     try:
+        # Run the synchronous workflow in a thread pool to avoid blocking
+        loop = asyncio.get_event_loop()
+        
         # Generate hot take using GPT
-        hot_take_result = workflow.hot_take_generator.generate_hot_take(
+        hot_take_result = await loop.run_in_executor(
+            None,
+            workflow.hot_take_generator.generate_hot_take,
             input_data.text, 
             input_data.context, 
             input_data.persona_id
@@ -255,14 +270,14 @@ async def generate_text_background(job_id: str, input_data: GenerateTextInput):
             "step": "text_generation"
         }
         
-        jobs[job_id].update({
+        job_storage.update_job(job_id, {
             "status": "completed",
             "results": results,
             "progress": "Text generation completed successfully"
         })
         
     except Exception as e:
-        jobs[job_id].update({
+        job_storage.update_job(job_id, {
             "status": "failed",
             "error": str(e),
             "progress": "Text generation failed"
@@ -282,15 +297,14 @@ async def generate_audio(
     if not persona:
         raise HTTPException(status_code=400, detail=f"Persona '{input_data.persona_id}' not found")
     
-    job_id = str(uuid.uuid4())
-    
-    # Initialize job
-    jobs[job_id] = {
+    # Create job using shared storage
+    job_data = {
         "status": "processing",
         "progress": f"Generating audio with {persona.name}...",
         "persona_id": input_data.persona_id,
         "step": "audio_generation"
     }
+    job_id = job_storage.create_job(job_data)
     
     # Start background processing
     background_tasks.add_task(
@@ -309,6 +323,9 @@ async def generate_audio(
 async def generate_audio_background(job_id: str, input_data: GenerateAudioInput):
     """Background task for audio generation."""
     try:
+        # Run the synchronous workflow in a thread pool to avoid blocking
+        loop = asyncio.get_event_loop()
+        
         # Get persona's voice ID
         persona = persona_manager.get_persona(input_data.persona_id)
         voice_id = persona.elevenlabs_voice_id if persona else None
@@ -318,7 +335,9 @@ async def generate_audio_background(job_id: str, input_data: GenerateAudioInput)
         audio_filename = f"{output_filename}.mp3"
         
         # Generate audio using ElevenLabs
-        audio_path = workflow.voice_generator.generate_speech(
+        audio_path = await loop.run_in_executor(
+            None,
+            workflow.voice_generator.generate_speech,
             input_data.text,
             audio_filename,
             input_data.voice_settings,
@@ -327,20 +346,20 @@ async def generate_audio_background(job_id: str, input_data: GenerateAudioInput)
         
         results = {
             "input_text": input_data.text,
-            "audio_path": audio_path,
+            "output_audio": f"/download/{Path(audio_path).name}",
             "voice_id": voice_id,
             "persona_id": input_data.persona_id,
             "step": "audio_generation"
         }
         
-        jobs[job_id].update({
+        job_storage.update_job(job_id, {
             "status": "completed",
             "results": results,
             "progress": "Audio generation completed successfully"
         })
         
     except Exception as e:
-        jobs[job_id].update({
+        job_storage.update_job(job_id, {
             "status": "failed",
             "error": str(e),
             "progress": "Audio generation failed"
@@ -364,15 +383,14 @@ async def generate_video(
     if not input_data.text and not input_data.audio_path:
         raise HTTPException(status_code=400, detail="Either text or audio_path must be provided")
     
-    job_id = str(uuid.uuid4())
-    
-    # Initialize job
-    jobs[job_id] = {
+    # Create job using shared storage
+    job_data = {
         "status": "processing",
         "progress": f"Generating video with {persona.name}...",
         "persona_id": input_data.persona_id,
         "step": "video_generation"
     }
+    job_id = job_storage.create_job(job_data)
     
     # Start background processing
     background_tasks.add_task(
@@ -391,6 +409,9 @@ async def generate_video(
 async def generate_video_background(job_id: str, input_data: GenerateVideoInput):
     """Background task for video generation."""
     try:
+        # Run the synchronous workflow in a thread pool to avoid blocking
+        loop = asyncio.get_event_loop()
+        
         # Get persona's avatar ID
         persona = persona_manager.get_persona(input_data.persona_id)
         
@@ -413,7 +434,9 @@ async def generate_video_background(job_id: str, input_data: GenerateVideoInput)
             if input_data.use_heygen_voice:
                 # Use HeyGen voice directly
                 voice_id = input_data.voice_id or persona.heygen_voice_id if persona else None
-                video_path = workflow.video_generator.generate_complete_video_from_text(
+                video_path = await loop.run_in_executor(
+                    None,
+                    workflow.video_generator.generate_complete_video_from_text,
                     input_data.text,
                     video_filename,
                     avatar_id,
@@ -424,13 +447,21 @@ async def generate_video_background(job_id: str, input_data: GenerateVideoInput)
                 # Use ElevenLabs voice (need to generate audio first)
                 voice_id = persona.elevenlabs_voice_id if persona else None
                 audio_filename = f"{output_filename}_temp.mp3"
-                audio_path = workflow.voice_generator.generate_speech(
+                
+                # Generate audio in thread pool
+                audio_path = await loop.run_in_executor(
+                    None,
+                    workflow.voice_generator.generate_speech,
                     input_data.text,
                     audio_filename,
                     None,
                     voice_id
                 )
-                video_path = workflow.video_generator.generate_complete_video(
+                
+                # Generate video in thread pool
+                video_path = await loop.run_in_executor(
+                    None,
+                    workflow.video_generator.generate_complete_video,
                     audio_path,
                     video_filename,
                     avatar_id,
@@ -441,7 +472,9 @@ async def generate_video_background(job_id: str, input_data: GenerateVideoInput)
             if not os.path.exists(input_data.audio_path):
                 raise Exception(f"Audio file not found: {input_data.audio_path}")
             
-            video_path = workflow.video_generator.generate_complete_video(
+            video_path = await loop.run_in_executor(
+                None,
+                workflow.video_generator.generate_complete_video,
                 input_data.audio_path,
                 video_filename,
                 avatar_id,
@@ -450,21 +483,21 @@ async def generate_video_background(job_id: str, input_data: GenerateVideoInput)
         
         results = {
             "input_text": input_data.text,
+            "output_video": f"/download/{Path(video_path).name}",
             "input_audio": input_data.audio_path,
-            "video_path": video_path,
             "avatar_id": avatar_id,
             "persona_id": input_data.persona_id,
             "step": "video_generation"
         }
         
-        jobs[job_id].update({
+        job_storage.update_job(job_id, {
             "status": "completed",
             "results": results,
             "progress": "Video generation completed successfully"
         })
         
     except Exception as e:
-        jobs[job_id].update({
+        job_storage.update_job(job_id, {
             "status": "failed",
             "error": str(e),
             "progress": "Video generation failed"
@@ -502,20 +535,20 @@ async def process_file(
         )
     
     # Create temporary file
-    job_id = str(uuid.uuid4())
-    temp_file = Config.TEMP_DIR / f"upload_{job_id}_{file.filename}"
+    temp_file = Config.TEMP_DIR / f"upload_{uuid.uuid4()}_{file.filename}"
     
     try:
         with open(temp_file, "wb") as f:
             f.write(content)
         
-        # Initialize job
-        jobs[job_id] = {
+        # Create job using shared storage
+        job_data = {
             "status": "processing",
             "progress": f"File uploaded, starting processing with {persona.name}...",
             "file_path": str(temp_file),
             "persona_id": persona_id
         }
+        job_id = job_storage.create_job(job_data)
         
         # Start background processing
         voice_settings = {
@@ -552,25 +585,33 @@ async def process_file_background(job_id: str, file_path: str, context: Optional
                                 persona_id: str):
     """Background task for processing files."""
     try:
-        jobs[job_id]["progress"] = "Processing audio/video..."
+        # Run the synchronous workflow in a thread pool to avoid blocking
+        loop = asyncio.get_event_loop()
         
-        results = workflow.process_audio_video_input(
+        job_storage.update_job(job_id, {"progress": "Processing audio/video..."})
+        
+        results = await loop.run_in_executor(
+            None,
+            workflow.process_audio_video_input,
             file_path,
-            context=context,
-            output_filename=f"job_{job_id}",
-            avatar_id=avatar_id,
-            voice_settings=voice_settings,
-            persona_id=persona_id
+            context,
+            f"job_{job_id}",
+            avatar_id,
+            voice_settings,
+            persona_id
         )
+
+        output_video_path = Path(results['video_path']).name
+        results["output_video"] = f"/download/{output_video_path}"
         
-        jobs[job_id].update({
+        job_storage.update_job(job_id, {
             "status": "completed",
             "results": results,
             "progress": "Processing completed successfully"
         })
         
     except Exception as e:
-        jobs[job_id].update({
+        job_storage.update_job(job_id, {
             "status": "failed",
             "error": str(e),
             "progress": "Processing failed"
@@ -596,14 +637,13 @@ async def process_text(
     if not persona:
         raise HTTPException(status_code=400, detail=f"Persona '{input_data.persona_id}' not found")
     
-    job_id = str(uuid.uuid4())
-    
-    # Initialize job
-    jobs[job_id] = {
+    # Create job using shared storage
+    job_data = {
         "status": "processing",
         "progress": f"Generating hot take from text with {persona.name}...",
         "persona_id": input_data.persona_id
     }
+    job_id = job_storage.create_job(job_data)
     
     # Start background processing
     background_tasks.add_task(
@@ -622,35 +662,45 @@ async def process_text(
 async def process_text_background(job_id: str, input_data: TextInput):
     """Background task for processing text."""
     try:
+        # Run the synchronous workflow in a thread pool to avoid blocking
+        loop = asyncio.get_event_loop()
+        
         if input_data.use_heygen_voice:
             # Use HeyGen voice directly
-            results = workflow.process_text_input_heygen_voice(
+            results = await loop.run_in_executor(
+                None,
+                workflow.process_text_input_heygen_voice,
                 input_data.text,
-                context=input_data.context,
-                output_filename=input_data.output_filename or f"text_job_{job_id}",
-                avatar_id=input_data.avatar_id,
-                voice_id=input_data.heygen_voice_id,
-                persona_id=input_data.persona_id
+                input_data.context,
+                input_data.output_filename or f"text_job_{job_id}",
+                input_data.avatar_id,
+                input_data.heygen_voice_id,
+                input_data.persona_id
             )
         else:
             # Use ElevenLabs voice
-            results = workflow.process_text_input(
+            results = await loop.run_in_executor(
+                None,
+                workflow.process_text_input,
                 input_data.text,
-                context=input_data.context,
-                output_filename=input_data.output_filename or f"text_job_{job_id}",
-                avatar_id=input_data.avatar_id,
-                voice_settings=input_data.voice_settings,
-                persona_id=input_data.persona_id
+                input_data.context,
+                input_data.output_filename or f"text_job_{job_id}",
+                input_data.avatar_id,
+                input_data.voice_settings,
+                input_data.persona_id
             )
         
-        jobs[job_id].update({
+        output_video_path = Path(results['video_path']).name
+        results["output_video"] = f"/download/{output_video_path}"
+        
+        job_storage.update_job(job_id, {
             "status": "completed",
             "results": results,
             "progress": "Text processing completed successfully"
         })
         
     except Exception as e:
-        jobs[job_id].update({
+        job_storage.update_job(job_id, {
             "status": "failed",
             "error": str(e),
             "progress": "Text processing failed"
@@ -670,14 +720,13 @@ async def quick_roast(
     if not persona:
         raise HTTPException(status_code=400, detail=f"Persona '{input_data.persona_id}' not found")
     
-    job_id = str(uuid.uuid4())
-    
-    # Initialize job
-    jobs[job_id] = {
+    # Create job using shared storage
+    job_data = {
         "status": "processing",
         "progress": f"Generating quick roast with {persona.name}...",
         "persona_id": input_data.persona_id
     }
+    job_id = job_storage.create_job(job_data)
     
     # Start background processing
     background_tasks.add_task(
@@ -696,21 +745,29 @@ async def quick_roast(
 async def quick_roast_background(job_id: str, input_data: RoastInput):
     """Background task for quick roast."""
     try:
-        results = workflow.quick_roast(
+        # Run the synchronous workflow in a thread pool to avoid blocking
+        loop = asyncio.get_event_loop()
+        
+        results = await loop.run_in_executor(
+            None,
+            workflow.quick_roast,
             input_data.topic,
-            output_filename=input_data.output_filename or f"roast_job_{job_id}",
-            avatar_id=input_data.avatar_id,
-            persona_id=input_data.persona_id
+            input_data.output_filename or f"roast_job_{job_id}",
+            input_data.avatar_id,
+            input_data.persona_id
         )
         
-        jobs[job_id].update({
+        output_video_path = Path(results['video_path']).name
+        results["output_video"] = f"/download/{output_video_path}"
+        
+        job_storage.update_job(job_id, {
             "status": "completed",
             "results": results,
             "progress": "Quick roast completed successfully"
         })
         
     except Exception as e:
-        jobs[job_id].update({
+        job_storage.update_job(job_id, {
             "status": "failed",
             "error": str(e),
             "progress": "Quick roast failed"
@@ -820,10 +877,14 @@ async def generate_pitch(input_data: GeneratePitchInput):
 @app.get("/job/{job_id}")
 async def get_job_status(job_id: str):
     """Get the status of a processing job."""
-    if job_id not in jobs:
+    if not job_storage:
+        raise HTTPException(status_code=500, detail="Job storage not initialized")
+    
+    job = job_storage.get_job(job_id)
+    if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     
-    return jobs[job_id]
+    return job
 
 @app.get("/test")
 async def test_services():
@@ -896,4 +957,4 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000, workers=4)
