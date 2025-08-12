@@ -9,6 +9,7 @@ class Config:
     # API Keys
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+    ELEVENLABS_API_TOKEN = os.getenv("ELEVENLABS_API_TOKEN")  # For direct API access
     HEYGEN_API_KEY = os.getenv("HEYGEN_API_KEY")
 
     

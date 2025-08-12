@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from elevenlabs import ElevenLabs
 from config import Config
 
@@ -22,8 +22,68 @@ class VoiceGenerator:
         except Exception as e:
             raise Exception(f"Failed to fetch available voices: {str(e)}")
     
+    def get_available_models(self) -> Dict[str, Any]:
+        """Get list of available models from ElevenLabs."""
+        try:
+            models = self.client.models.list()
+            return {"models": models}
+        except Exception as e:
+            raise Exception(f"Failed to fetch available models: {str(e)}")
+    
+    def get_text_to_speech_models(self) -> Dict[str, Any]:
+        """Get list of models that support text-to-speech."""
+        try:
+            all_models = self.client.models.list()
+            tts_models = [model for model in all_models if model.can_do_text_to_speech]
+            return {"models": tts_models}
+        except Exception as e:
+            raise Exception(f"Failed to fetch text-to-speech models: {str(e)}")
+    
+    def get_model_info(self, model_id: str) -> Dict[str, Any]:
+        """Get information about a specific model."""
+        try:
+            all_models = self.client.models.list()
+            for model in all_models:
+                if model.model_id == model_id:
+                    return {"model": model}
+            raise Exception(f"Model with ID '{model_id}' not found")
+        except Exception as e:
+            raise Exception(f"Failed to get model info: {str(e)}")
+    
+    def get_best_tts_model(self) -> str:
+        """Get the best available text-to-speech model ID."""
+        try:
+            tts_models = self.get_text_to_speech_models()
+            models = tts_models["models"]
+            
+            # Priority order for models (most preferred first)
+            preferred_models = [
+                "eleven_multilingual_v2",
+                "eleven_turbo_v2", 
+                "eleven_monolingual_v1",
+                "eleven_multilingual_v1"
+            ]
+            
+            # Try to find a preferred model
+            for preferred in preferred_models:
+                for model in models:
+                    if model.model_id == preferred:
+                        return model.model_id
+            
+            # If no preferred model found, return the first available TTS model
+            if models:
+                return models[0].model_id
+            
+            # Fallback to default
+            return "eleven_multilingual_v2"
+            
+        except Exception as e:
+            # Fallback to default model
+            return "eleven_multilingual_v2"
+    
     def generate_speech(self, text: str, output_filename: Optional[str] = None, 
-                       voice_settings: Optional[Dict] = None, voice_id: Optional[str] = None) -> str:
+                       voice_settings: Optional[Dict] = None, voice_id: Optional[str] = None,
+                       model_id: Optional[str] = None) -> str:
         """
         Generate speech from text using ElevenLabs API.
         
@@ -32,6 +92,7 @@ class VoiceGenerator:
             output_filename: Optional filename for the output audio file
             voice_settings: Optional voice settings (stability, similarity_boost, style)
             voice_id: Optional ElevenLabs voice ID (if not provided, will use default)
+            model_id: Optional ElevenLabs model ID (if not provided, will use best available)
         
         Returns:
             Path to the generated audio file
@@ -56,11 +117,14 @@ class VoiceGenerator:
             # Use provided voice_id or default to a common voice
             voice_id_to_use = voice_id or Config.DEFAULT_ELEVENLABS_VOICE_ID
             
+            # Use provided model_id or get the best available TTS model
+            model_id_to_use = model_id or self.get_best_tts_model()
+            
             # Generate speech using the ElevenLabs SDK
             audio_stream = self.client.text_to_speech.convert(
                 text=text,
                 voice_id=voice_id_to_use,
-                model_id="eleven_multilingual_v2",
+                model_id=model_id_to_use,
                 output_format="mp3_44100_128",
                 voice_settings=default_settings
             )
@@ -76,7 +140,8 @@ class VoiceGenerator:
             raise Exception(f"Failed to generate speech: {str(e)}")
     
     def generate_speech_streaming(self, text: str, output_filename: Optional[str] = None,
-                                voice_settings: Optional[Dict] = None, voice_id: Optional[str] = None) -> str:
+                                voice_settings: Optional[Dict] = None, voice_id: Optional[str] = None,
+                                model_id: Optional[str] = None) -> str:
         """
         Generate speech using the ElevenLabs SDK (same as regular method for now).
         """
@@ -99,11 +164,14 @@ class VoiceGenerator:
             # Use provided voice_id or default to a common voice
             voice_id_to_use = voice_id or Config.DEFAULT_ELEVENLABS_VOICE_ID
             
+            # Use provided model_id or get the best available TTS model
+            model_id_to_use = model_id or self.get_best_tts_model()
+            
             # Generate speech using the ElevenLabs SDK
             audio_stream = self.client.text_to_speech.convert(
                 text=text,
                 voice_id=voice_id_to_use,
-                model_id="eleven_multilingual_v2",
+                model_id=model_id_to_use,
                 output_format="mp3_44100_128",
                 voice_settings=default_settings
             )

@@ -161,6 +161,10 @@ async def root():
             "GET /personas": "List available personas",
             "GET /personas/{persona_id}": "Get persona details",
             "GET /heygen-voices": "List HeyGen voices",
+            "GET /elevenlabs-models": "List all ElevenLabs models",
+            "GET /elevenlabs-tts-models": "List ElevenLabs TTS models",
+            "GET /elevenlabs-models/{model_id}": "Get specific ElevenLabs model info",
+            "GET /elevenlabs-best-tts-model": "Get best ElevenLabs TTS model",
             "GET /test": "Test service connections",
             "GET /info": "Get service information",
             "GET /job/{job_id}": "Get job status",
@@ -251,6 +255,62 @@ async def list_heygen_voices():
         return {
             "voices": voices,
             "count": len(voices.get("data", [])) if isinstance(voices, dict) else len(voices)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/elevenlabs-models")
+async def list_elevenlabs_models():
+    """List all available ElevenLabs models."""
+    if not workflow:
+        raise HTTPException(status_code=500, detail="Workflow not initialized")
+    
+    try:
+        models = workflow.voice_generator.get_available_models()
+        return {
+            "models": models["models"],
+            "count": len(models["models"])
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/elevenlabs-tts-models")
+async def list_elevenlabs_tts_models():
+    """List ElevenLabs models that support text-to-speech."""
+    if not workflow:
+        raise HTTPException(status_code=500, detail="Workflow not initialized")
+    
+    try:
+        tts_models = workflow.voice_generator.get_text_to_speech_models()
+        return {
+            "models": tts_models["models"],
+            "count": len(tts_models["models"])
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/elevenlabs-models/{model_id}")
+async def get_elevenlabs_model_info(model_id: str):
+    """Get information about a specific ElevenLabs model."""
+    if not workflow:
+        raise HTTPException(status_code=500, detail="Workflow not initialized")
+    
+    try:
+        model_info = workflow.voice_generator.get_model_info(model_id)
+        return model_info
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/elevenlabs-best-tts-model")
+async def get_best_elevenlabs_tts_model():
+    """Get the best available ElevenLabs text-to-speech model ID."""
+    if not workflow:
+        raise HTTPException(status_code=500, detail="Workflow not initialized")
+    
+    try:
+        best_model_id = workflow.voice_generator.get_best_tts_model()
+        return {
+            "best_model_id": best_model_id
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -495,6 +555,42 @@ async def generate_video_background(job_id: str, input_data: GenerateVideoInput)
                     voice_id,
                     persona.name
                 )
+                
+                # Upload video to S3 with permanent public URL
+                logger.info("Uploading HeyGen video to S3 with permanent public URL...")
+                try:
+                    video_s3_key = f"videos/{output_filename}.mp4"
+                    video_url = await loop.run_in_executor(
+                        None,
+                        workflow.upload_file_to_s3,
+                        video_path,
+                        video_s3_key,
+                        "video/mp4"
+                    )
+                    logger.info(f"HeyGen video uploaded to S3 with permanent URL: {video_url}")
+                    
+                    results = {
+                        "input_text": input_data.text,
+                        "output_video": video_url,  # Use S3 URL instead of local path
+                        "input_audio": input_data.audio_path,
+                        "avatar_id": avatar_id,
+                        "persona_id": input_data.persona_id,
+                        "step": "video_generation",
+                        "voice_provider": "heygen"
+                    }
+                    
+                except Exception as e:
+                    logger.error(f"Failed to upload HeyGen video to S3: {e}")
+                    # Use local path as fallback
+                    results = {
+                        "input_text": input_data.text,
+                        "output_video": f"/download/{Path(video_path).name}",
+                        "input_audio": input_data.audio_path,
+                        "avatar_id": avatar_id,
+                        "persona_id": input_data.persona_id,
+                        "step": "video_generation",
+                        "voice_provider": "heygen"
+                    }
             else:
                 # Use ElevenLabs voice (need to generate audio first)
                 voice_id = persona.elevenlabs_voice_id if persona else None
@@ -519,6 +615,15 @@ async def generate_video_background(job_id: str, input_data: GenerateVideoInput)
                     avatar_id,
                     persona.name
                 )
+                
+                results = {
+                    "input_text": input_data.text,
+                    "output_video": f"/download/{Path(video_path).name}",
+                    "input_audio": input_data.audio_path,
+                    "avatar_id": avatar_id,
+                    "persona_id": input_data.persona_id,
+                    "step": "video_generation"
+                }
         else:
             # Generate video from audio file
             if not os.path.exists(input_data.audio_path):
@@ -532,15 +637,15 @@ async def generate_video_background(job_id: str, input_data: GenerateVideoInput)
                 avatar_id,
                 persona.name
             )
-        
-        results = {
-            "input_text": input_data.text,
-            "output_video": f"/download/{Path(video_path).name}",
-            "input_audio": input_data.audio_path,
-            "avatar_id": avatar_id,
-            "persona_id": input_data.persona_id,
-            "step": "video_generation"
-        }
+            
+            results = {
+                "input_text": input_data.text,
+                "output_video": f"/download/{Path(video_path).name}",
+                "input_audio": input_data.audio_path,
+                "avatar_id": avatar_id,
+                "persona_id": input_data.persona_id,
+                "step": "video_generation"
+            }
         
         job_storage.update_job(job_id, {
             "status": "completed",
@@ -748,8 +853,19 @@ async def process_text_background(job_id: str, input_data: TextInput):
                 input_data.persona_id
             )
         
-        output_video_path = Path(results['video_path']).name
-        results["output_video"] = f"/download/{output_video_path}"
+        # Use S3 URL if available, otherwise use local path
+        if 'video_url' in results and results['video_url']:
+            results["output_video"] = results['video_url']
+        else:
+            output_video_path = Path(results['video_path']).name
+            results["output_video"] = f"/download/{output_video_path}"
+        
+        # Use S3 URL for audio if available
+        if 'audio_url' in results and results['audio_url']:
+            results["output_audio"] = results['audio_url']
+        elif 'audio_path' in results:
+            output_audio_path = Path(results['audio_path']).name
+            results["output_audio"] = f"/download/{output_audio_path}"
         
         job_storage.update_job(job_id, {
             "status": "completed",
@@ -817,8 +933,19 @@ async def quick_roast_background(job_id: str, input_data: RoastInput):
             input_data.persona_id
         )
         
-        output_video_path = Path(results['video_path']).name
-        results["output_video"] = f"/download/{output_video_path}"
+        # Use S3 URL if available, otherwise use local path
+        if 'video_url' in results and results['video_url']:
+            results["output_video"] = results['video_url']
+        else:
+            output_video_path = Path(results['video_path']).name
+            results["output_video"] = f"/download/{output_video_path}"
+        
+        # Use S3 URL for audio if available
+        if 'audio_url' in results and results['audio_url']:
+            results["output_audio"] = results['audio_url']
+        elif 'audio_path' in results:
+            output_audio_path = Path(results['audio_path']).name
+            results["output_audio"] = f"/download/{output_audio_path}"
         
         job_storage.update_job(job_id, {
             "status": "completed",
@@ -886,26 +1013,85 @@ async def generate_pitch(input_data: GeneratePitchInput):
         )
         output_text = hot_take_result["hot_take"]
         
-        # Step 2: Generate audio using persona's voice configuration
+        # Step 2: Generate audio/video using persona's voice configuration
         timestamp = int(time.time())
-        audio_filename = f"pitch_audio_{job_id}_{timestamp}.mp3"
         
-        output_audio = workflow.voice_generator.generate_speech(
-            output_text,
-            audio_filename,
-            voice_settings=None,  # Use default settings
-            voice_id=persona.elevenlabs_voice_id
-        )
-        
-        # Step 3: Generate video using persona's avatar
-        video_filename = f"pitch_video_{job_id}_{timestamp}.mp4"
-        
-        output_video = workflow.video_generator.generate_complete_video(
-            output_audio,
-            video_filename,
-            talking_photo_id=persona.heygen_avatar_id,
-            persona_name=persona.name
-        )
+        # Check if persona has HeyGen voice ID, if so, use HeyGen voice directly
+        if persona.heygen_voice_id:
+            logger.info("Using HeyGen voice for pitch generation")
+            voice_provider = "heygen"
+            
+            # Generate video directly from text using HeyGen's voice
+            video_filename = f"pitch_video_{job_id}_{timestamp}.mp4"
+            
+            output_video = workflow.video_generator.generate_complete_video_from_text(
+                output_text,
+                video_filename,
+                talking_photo_id=persona.heygen_avatar_id,
+                voice_id=persona.heygen_voice_id,
+                persona_name=persona.name
+            )
+            
+            # Upload video to S3
+            logger.info("Uploading HeyGen video to S3...")
+            try:
+                video_s3_key = f"videos/{video_filename}"
+                video_url = workflow.upload_file_to_s3(output_video, video_s3_key, "video/mp4")
+                output_video_url = video_url
+                logger.info(f"HeyGen video uploaded to S3: {video_url}")
+            except Exception as e:
+                logger.error(f"Failed to upload HeyGen video to S3: {e}")
+                output_video_url = f"/download/{Path(output_video).name}"
+            
+            # For HeyGen voice, we don't have a separate audio file
+            output_audio_url = None
+            
+        else:
+            # Use ElevenLabs voice (traditional approach)
+            logger.info("Using ElevenLabs voice for pitch generation")
+            voice_provider = "elevenlabs"
+            
+            # Generate audio using persona's voice configuration
+            audio_filename = f"pitch_audio_{job_id}_{timestamp}.mp3"
+            
+            output_audio = workflow.voice_generator.generate_speech(
+                output_text,
+                audio_filename,
+                voice_settings=None,  # Use default settings
+                voice_id=persona.elevenlabs_voice_id
+            )
+            
+            # Upload audio to S3
+            logger.info("Uploading ElevenLabs audio to S3...")
+            try:
+                audio_s3_key = f"audio/{audio_filename}"
+                audio_url = workflow.upload_file_to_s3(output_audio, audio_s3_key, "audio/mpeg")
+                output_audio_url = audio_url
+                logger.info(f"ElevenLabs audio uploaded to S3: {audio_url}")
+            except Exception as e:
+                logger.error(f"Failed to upload ElevenLabs audio to S3: {e}")
+                output_audio_url = f"/download/{Path(output_audio).name}"
+            
+            # Generate video using persona's avatar
+            video_filename = f"pitch_video_{job_id}_{timestamp}.mp4"
+            
+            output_video = workflow.video_generator.generate_complete_video(
+                output_audio,
+                video_filename,
+                talking_photo_id=persona.heygen_avatar_id,
+                persona_name=persona.name
+            )
+            
+            # Upload video to S3
+            logger.info("Uploading ElevenLabs video to S3...")
+            try:
+                video_s3_key = f"videos/{video_filename}"
+                video_url = workflow.upload_file_to_s3(output_video, video_s3_key, "video/mp4")
+                output_video_url = video_url
+                logger.info(f"ElevenLabs video uploaded to S3: {video_url}")
+            except Exception as e:
+                logger.error(f"Failed to upload ElevenLabs video to S3: {e}")
+                output_video_url = f"/download/{Path(output_video).name}"
         
         # Calculate total time
         total_time = time.time() - start_time
@@ -913,10 +1099,9 @@ async def generate_pitch(input_data: GeneratePitchInput):
         logger.info(f"Pitch generation completed in {total_time:.2f}s")
         
         # Return all outputs directly
-        return {
+        response_data = {
             "output_text": output_text,
-            "output_audio": f"/download/{Path(output_audio).name}",
-            "output_video": f"/download/{Path(output_video).name}",
+            "output_video": output_video_url,
             "persona_used": {
                 "id": persona_id,
                 "name": persona.name
@@ -926,9 +1111,16 @@ async def generate_pitch(input_data: GeneratePitchInput):
                     "tokens": hot_take_result.get("total_tokens", 0),
                     "latency": hot_take_result.get("latency_seconds", 0)
                 },
-                "total_processing_time": total_time
+                "total_processing_time": total_time,
+                "voice_provider": voice_provider
             }
         }
+        
+        # Only include audio URL if we have one (ElevenLabs voice)
+        if output_audio_url:
+            response_data["output_audio"] = output_audio_url
+        
+        return response_data
         
     except Exception as e:
         logger.error(f"Pitch generation failed: {str(e)}")
