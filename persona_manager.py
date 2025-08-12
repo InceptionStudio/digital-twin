@@ -30,6 +30,9 @@ class Persona:
     heygen_voice_id: Optional[str] = None
     heygen_avatar_id: Optional[str] = None
     description: Optional[str] = None
+    nickname: Optional[str] = None
+    color_a: Optional[str] = None
+    color_b: Optional[str] = None
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert persona to dictionary"""
@@ -99,10 +102,45 @@ class PersonaManager:
             elevenlabs_voice_id=None,  # Can be set later
             heygen_voice_id="82025eb9625b4c09aec78f89528cc33a",
             heygen_avatar_id="0ccb7cd7f5fe49f09ae90df50f2e9140",
-            description="The original hot take commentator with a distinctive voice and style - like Kevin O'Leary from Shark Tank, but with one exit, three podcasts, and a six-figure LinkedIn following"
+            description="The original hot take commentator with a distinctive voice and style - like Kevin O'Leary from Shark Tank, but with one exit, three podcasts, and a six-figure LinkedIn following",
+            nickname="Chad",
+            color_a="#ff6b35",
+            color_b="#1a0f0a"
+        )
+        
+        # Sarah Guo persona
+        sarah_persona = Persona(
+            name="Sarah Guo",
+            bio="Founder of Conviction",
+            prompt_file="personas/prompts/sarah_guo.txt",
+            image_file="personas/avatars/Sarah.jpg",
+            elevenlabs_voice_id="zqjPlH84bFLbo8q9PPo7",
+            heygen_voice_id="cb8c232f08a9466c870ad2c037fcf77a",
+            heygen_avatar_id="129fa3d48fad41e4975c4e9471d953fb",
+            description="Scalpel-precise teardown, founder-friendly",
+            nickname="Sarah",
+            color_a="#7c4dff",
+            color_b="#12121a"
+        )
+        
+        # Russ Hanneman persona
+        russ_persona = Persona(
+            name="Russ Hanneman",
+            bio="billionaire tech bro",
+            prompt_file="personas/prompts/russ_hanneman.txt",
+            image_file="personas/avatars/Russ.jpg",
+            elevenlabs_voice_id="gAKthYOSzqg2QQCLq9YD",
+            heygen_voice_id="39aba9482c74479ea3fa00023304392e",
+            heygen_avatar_id="de3a283990d8415082e26c2b81fb34c7",
+            description="Billionaire tech bro with unfiltered opinions",
+            nickname="Russ",
+            color_a="#ffd700",
+            color_b="#1a1a0a"
         )
         
         self.personas["chad_goldstein"] = chad_persona
+        self.personas["sarah_guo"] = sarah_persona
+        self.personas["russ_hanneman"] = russ_persona
         
         # Save the default personas
         self.save_personas()
@@ -136,7 +174,11 @@ class PersonaManager:
                 "has_image": persona.image_file is not None,
                 "has_elevenlabs": persona.elevenlabs_voice_id is not None,
                 "has_heygen_voice": persona.heygen_voice_id is not None,
-                "has_heygen_avatar": persona.heygen_avatar_id is not None
+                "has_heygen_avatar": persona.heygen_avatar_id is not None,
+                # Frontend-specific fields
+                "nickname": persona.nickname or persona.name.split(' ')[0],
+                "color_a": persona.color_a or "#00c2ff",
+                "color_b": persona.color_b or "#0b1220"
             }
             for persona_id, persona in self.personas.items()
         ]

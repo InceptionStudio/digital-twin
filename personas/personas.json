@@ -7,17 +7,23 @@
     "elevenlabs_voice_id": null,
     "heygen_voice_id": "82025eb9625b4c09aec78f89528cc33a",
     "heygen_avatar_id": "0ccb7cd7f5fe49f09ae90df50f2e9140",
-    "description": "The original hot take commentator with a distinctive voice and style - like Kevin O'Leary from Shark Tank, but with one exit, three podcasts, and a six-figure LinkedIn following"
+    "description": "The original hot take commentator with a distinctive voice and style - like Kevin O'Leary from Shark Tank, but with one exit, three podcasts, and a six-figure LinkedIn following",
+    "nickname": "Chad",
+    "color_a": "#ff6b35",
+    "color_b": "#1a0f0a"
   },
   "sarah_guo": {
     "name": "Sarah Guo",
     "bio": "Founder of Conviction",
     "prompt_file": "personas/prompts/sarah_guo.txt",
-    "image_file": null,
+    "image_file": "personas/avatars/Sarah.jpg",
     "elevenlabs_voice_id": "zqjPlH84bFLbo8q9PPo7",
     "heygen_voice_id": "cb8c232f08a9466c870ad2c037fcf77a",
     "heygen_avatar_id": "129fa3d48fad41e4975c4e9471d953fb",
-    "description": null
+    "description": "Scalpel-precise teardown, founder-friendly",
+    "nickname": "Sarah",
+    "color_a": "#7c4dff",
+    "color_b": "#12121a"
   },
   "russ_hanneman": {
     "name": "Russ Hanneman",
@@ -27,6 +33,9 @@
     "elevenlabs_voice_id": "gAKthYOSzqg2QQCLq9YD",
     "heygen_voice_id": "39aba9482c74479ea3fa00023304392e",
     "heygen_avatar_id": "de3a283990d8415082e26c2b81fb34c7",
-    "description": null
+    "description": "Billionaire tech bro with unfiltered opinions",
+    "nickname": "Russ",
+    "color_a": "#ffd700",
+    "color_b": "#1a1a0a"
   }
 }
