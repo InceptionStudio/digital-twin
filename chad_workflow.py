@@ -259,15 +259,15 @@ class ChadWorkflow:
                 try:
                     # Upload audio file to S3
                     audio_s3_key = f"audio/{output_filename}.mp3"
-                    audio_s3_url = self.upload_file_to_s3(audio_path, audio_s3_key, "audio/mpeg")
-                    results["audio_s3_url"] = audio_s3_url
+                    audio_url = self.upload_file_to_s3(audio_path, audio_s3_key, "audio/mpeg")
+                    results["audio_url"] = audio_url
                     
                     # Upload video file to S3
                     video_s3_key = f"videos/{output_filename}.mp4"
-                    video_s3_url = self.upload_file_to_s3(video_path, video_s3_key, "video/mp4")
-                    results["video_s3_url"] = video_s3_url
+                    video_url = self.upload_file_to_s3(video_path, video_s3_key, "video/mp4")
+                    results["video_url"] = video_url
                     
-                    logger.info(f"Files uploaded to S3: audio={audio_s3_url}, video={video_s3_url}")
+                    logger.info(f"Files uploaded to S3: audio={audio_url}, video={video_url}")
                     
                 except Exception as e:
                     logger.error(f"Failed to upload files to S3: {e}")
@@ -443,9 +443,9 @@ class ChadWorkflow:
                 logger.info("Uploading video to S3...")
                 try:
                     video_s3_key = f"videos/{output_filename}.mp4"
-                    video_s3_url = self.upload_file_to_s3(video_path, video_s3_key, "video/mp4")
-                    results["video_s3_url"] = video_s3_url
-                    logger.info(f"Video uploaded to S3: {video_s3_url}")
+                    video_url = self.upload_file_to_s3(video_path, video_s3_key, "video/mp4")
+                    results["video_url"] = video_url
+                    logger.info(f"Video uploaded to S3: {video_url}")
                     
                 except Exception as e:
                     logger.error(f"Failed to upload video to S3: {e}")
