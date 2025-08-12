@@ -78,7 +78,6 @@ When modifying personas:
 - OpenAI GPT-4/5 for text generation
 - ElevenLabs for voice synthesis
 - HeyGen for avatar video generation
-- HuggingFace for audio diarization (optional)
 
 All API keys are configured in `.env` file.
 

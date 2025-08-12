@@ -1,6 +1,3 @@
-# Heavy ML dependencies
-audio_diarizer.py
-
 # Development files
 __pycache__/
 *.pyc

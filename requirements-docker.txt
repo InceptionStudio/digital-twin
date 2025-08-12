@@ -24,9 +24,3 @@ ffmpeg-python>=0.2.0
 
 # Video processing (minimal)
 moviepy>=1.0.3
-
-# Optional: Only include if actually used
-# numpy<2  # Remove if not needed for core functionality
-# torch>=2.0.0  # Remove if not doing local ML inference
-# pyannote.audio>=3.0.0  # Remove if not doing speaker diarization
-# simple-diarizer==0.0.13  # Remove if not doing speaker diarization

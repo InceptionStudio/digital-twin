@@ -506,7 +506,6 @@ services:
 OPENAI_API_KEY=xxx
 ELEVENLABS_API_KEY=xxx
 HEYGEN_API_KEY=xxx
-HUGGINGFACE_TOKEN=xxx
 ```
 
 ## Testing Workflows

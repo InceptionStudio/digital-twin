@@ -50,9 +50,6 @@ ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
 # HeyGen API Configuration
 HEYGEN_API_KEY=your_heygen_api_key_here
 
-# HuggingFace Token (for audio diarization)
-HUGGINGFACE_TOKEN=your_huggingface_token_here
-
 # Application Configuration (optional)
 MAX_FILE_SIZE_MB=50
 TEMP_DIR=./temp
@@ -261,11 +258,6 @@ python persona_cli.py delete chad_goldstein
 3. Get API key and avatar ID
 4. Add both to `.env`
 
-### HuggingFace (for audio diarization)
-1. Go to [HuggingFace](https://huggingface.co/settings/tokens)
-2. Create a new token
-3. Add to `.env` as `HUGGINGFACE_TOKEN`
-
 ## Default Personas
 
 ### Chad Goldstein
@@ -302,7 +294,7 @@ digital-twin/
 ├── web_api.py              # FastAPI web interface
 ├── persona_manager.py       # Persona management system
 ├── persona_cli.py          # Persona CLI interface
-├── audio_diarizer.py       # Audio speaker separation
+
 ├── personas/               # Persona configurations
 │   ├── personas.json       # Persona database
 │   └── prompts/           # Persona prompt files
@@ -310,15 +302,6 @@ digital-twin/
 │       └── sarah_guo.txt
 ├── temp/                   # Temporary files
 └── output/                 # Generated files
-```
-
-## Audio Diarization
-
-Separate multiple speakers in audio files:
-
-```bash
-python audio_diarizer.py --file "meeting_recording.mp3" --diarizer pyannote
-python audio_diarizer.py --file "meeting_recording.mp3" --diarizer simple --num-speakers 3
 ```
 
 ## Troubleshooting

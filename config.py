@@ -10,7 +10,7 @@ class Config:
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
     HEYGEN_API_KEY = os.getenv("HEYGEN_API_KEY")
-    HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
+
     
     # Default Voice IDs
     DEFAULT_ELEVENLABS_VOICE_ID = "zqjPlH84bFLbo8q9PPo7" # Sarah Guo
