@@ -473,16 +473,22 @@ class ChadWorkflow:
             }
         }
         
-        # Get ElevenLabs voices
+        # Get ElevenLabs voice count instead of all voices
         try:
-            info["elevenlabs_voices"] = self.voice_generator.get_available_voices()
+            all_voices = self.voice_generator.get_available_voices()
+            info["elevenlabs_voices_count"] = len(all_voices) if isinstance(all_voices, list) else 0
+            info["elevenlabs_voices_available"] = True
         except Exception as e:
             info["elevenlabs_error"] = str(e)
+            info["elevenlabs_voices_available"] = False
         
-        # Get HeyGen avatars
+        # Get HeyGen avatar count instead of all avatars
         try:
-            info["heygen_avatars"] = self.video_generator.get_avatars()
+            all_avatars = self.video_generator.get_avatars()
+            info["heygen_avatars_count"] = len(all_avatars.get("data", [])) if isinstance(all_avatars, dict) and "data" in all_avatars else 0
+            info["heygen_avatars_available"] = True
         except Exception as e:
             info["heygen_error"] = str(e)
+            info["heygen_avatars_available"] = False
         
         return info

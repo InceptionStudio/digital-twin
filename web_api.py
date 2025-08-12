@@ -943,7 +943,59 @@ async def get_service_info():
         raise HTTPException(status_code=500, detail="Workflow not initialized")
     
     try:
-        return workflow.get_service_info()
+        # Get basic service info from workflow
+        info = workflow.get_service_info()
+        
+        # Add job storage information
+        if job_storage:
+            try:
+                info["job_storage"] = {
+                    "type": job_storage.__class__.__name__,
+                    "available": True
+                }
+                
+                # Add Redis-specific information
+                if hasattr(job_storage, 'redis') and job_storage.redis:
+                    try:
+                        # Test Redis connection
+                        job_storage.redis.ping()
+                        info["job_storage"]["redis_connected"] = True
+                        
+                        # Get Redis info
+                        redis_info = job_storage.redis.info()
+                        info["job_storage"]["redis_info"] = {
+                            "version": redis_info.get("redis_version", "unknown"),
+                            "connected_clients": redis_info.get("connected_clients", 0),
+                            "used_memory_human": redis_info.get("used_memory_human", "unknown"),
+                            "total_commands_processed": redis_info.get("total_commands_processed", 0)
+                        }
+                        
+                        # Get job count
+                        if hasattr(job_storage, 'redis') and hasattr(job_storage.redis, 'smembers'):
+                            active_jobs = job_storage.redis.smembers("jobs:active")
+                            info["job_storage"]["active_jobs_count"] = len(active_jobs)
+                        
+                    except Exception as e:
+                        info["job_storage"]["redis_connected"] = False
+                        info["job_storage"]["redis_error"] = str(e)
+                
+                # Add memory storage information
+                elif hasattr(job_storage, 'jobs'):
+                    info["job_storage"]["active_jobs_count"] = len(job_storage.jobs)
+                
+            except Exception as e:
+                info["job_storage"] = {
+                    "type": job_storage.__class__.__name__ if job_storage else "unknown",
+                    "available": False,
+                    "error": str(e)
+                }
+        else:
+            info["job_storage"] = {
+                "type": "none",
+                "available": False
+            }
+        
+        return info
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
