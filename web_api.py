@@ -14,11 +14,12 @@ import uuid
 import asyncio
 from pathlib import Path
 import logging
+from datetime import datetime, timedelta
 
 from chad_workflow import ChadWorkflow
 from config import Config
 from persona_manager import persona_manager
-from job_storage import create_job_storage
+from job_storage import create_job_storage, RedisJobStorage
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -98,6 +99,26 @@ class PersonaInfo(BaseModel):
     description: Optional[str] = None
     configurations: Dict[str, bool]
 
+# Add new Pydantic models for history
+class HistoryItem(BaseModel):
+    job_id: str
+    created_at: str
+    status: str
+    persona_id: str
+    persona_name: str
+    input_text: Optional[str] = None
+    input_file: Optional[str] = None
+    context: Optional[str] = None
+    results: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+    step: Optional[str] = None
+
+class HistoryResponse(BaseModel):
+    items: List[HistoryItem]
+    total: int
+    page: int
+    per_page: int
+
 # Job storage (shared across workers)
 job_storage = None
 
@@ -143,7 +164,8 @@ async def root():
             "GET /test": "Test service connections",
             "GET /info": "Get service information",
             "GET /job/{job_id}": "Get job status",
-            "GET /download/{filename}": "Download generated files"
+            "GET /download/{filename}": "Download generated files",
+            "GET /history": "Get history of past queries and results"
         }
     }
 
@@ -227,7 +249,9 @@ async def generate_text(
         "status": "processing",
         "progress": f"Generating text response with {persona.name}...",
         "persona_id": input_data.persona_id,
-        "step": "text_generation"
+        "step": "text_generation",
+        "input_text": input_data.text,
+        "context": input_data.context
     }
     job_id = job_storage.create_job(job_data)
     
@@ -302,7 +326,8 @@ async def generate_audio(
         "status": "processing",
         "progress": f"Generating audio with {persona.name}...",
         "persona_id": input_data.persona_id,
-        "step": "audio_generation"
+        "step": "audio_generation",
+        "input_text": input_data.text
     }
     job_id = job_storage.create_job(job_data)
     
@@ -388,7 +413,9 @@ async def generate_video(
         "status": "processing",
         "progress": f"Generating video with {persona.name}...",
         "persona_id": input_data.persona_id,
-        "step": "video_generation"
+        "step": "video_generation",
+        "input_text": input_data.text,
+        "input_audio": input_data.audio_path
     }
     job_id = job_storage.create_job(job_data)
     
@@ -546,7 +573,10 @@ async def process_file(
             "status": "processing",
             "progress": f"File uploaded, starting processing with {persona.name}...",
             "file_path": str(temp_file),
-            "persona_id": persona_id
+            "persona_id": persona_id,
+            "input_file": file.filename,
+            "context": context,
+            "step": "file_processing"
         }
         job_id = job_storage.create_job(job_data)
         
@@ -641,7 +671,10 @@ async def process_text(
     job_data = {
         "status": "processing",
         "progress": f"Generating hot take from text with {persona.name}...",
-        "persona_id": input_data.persona_id
+        "persona_id": input_data.persona_id,
+        "input_text": input_data.text,
+        "context": input_data.context,
+        "step": "text_processing"
     }
     job_id = job_storage.create_job(job_data)
     
@@ -724,7 +757,9 @@ async def quick_roast(
     job_data = {
         "status": "processing",
         "progress": f"Generating quick roast with {persona.name}...",
-        "persona_id": input_data.persona_id
+        "persona_id": input_data.persona_id,
+        "input_text": input_data.topic,
+        "step": "quick_roast"
     }
     job_id = job_storage.create_job(job_data)
     
@@ -934,6 +969,28 @@ async def download_file(filename: str):
         filename=filename
     )
 
+@app.get("/stream/{filename}")
+async def stream_file(filename: str):
+    """Stream a video/audio file for playback."""
+    file_path = Config.OUTPUT_DIR / filename
+    
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    # Determine media type
+    if filename.endswith('.mp4'):
+        media_type = "video/mp4"
+    elif filename.endswith('.mp3'):
+        media_type = "audio/mpeg"
+    else:
+        media_type = "application/octet-stream"
+    
+    return FileResponse(
+        path=str(file_path),
+        media_type=media_type
+        # No filename parameter = no download, browser will play it
+    )
+
 @app.post("/cleanup")
 async def cleanup_files():
     """Clean up temporary and old files."""
@@ -954,6 +1011,98 @@ async def health_check():
         "workflow_initialized": workflow is not None,
         "available_personas": len(persona_manager.list_personas())
     }
+
+@app.get("/history", response_model=HistoryResponse)
+async def get_history(
+    page: int = Query(1, ge=1, description="Page number"),
+    per_page: int = Query(20, ge=1, le=100, description="Items per page"),
+    persona_id: Optional[str] = Query(None, description="Filter by persona ID"),
+    status: Optional[str] = Query(None, description="Filter by status (completed, failed, pending)"),
+    days: Optional[int] = Query(7, ge=1, le=365, description="Number of days to look back")
+):
+    """Get history of past queries and results."""
+    try:
+        # Get all jobs from storage
+        all_jobs = []
+        
+        if isinstance(job_storage, RedisJobStorage):
+            # For Redis, we need to get all job IDs first
+            job_ids = job_storage.redis.smembers("jobs:active")
+            for job_id in job_ids:
+                job_data = job_storage.get_job(job_id)
+                if job_data:
+                    all_jobs.append(job_data)
+        else:
+            # For in-memory storage, get all jobs
+            all_jobs = list(job_storage.jobs.values())
+        
+        # Filter jobs based on criteria
+        filtered_jobs = []
+        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        
+        for job in all_jobs:
+            # Filter by date
+            created_at = datetime.fromisoformat(job.get("created_at", "1970-01-01T00:00:00"))
+            if created_at < cutoff_date:
+                continue
+                
+            # Filter by persona
+            if persona_id and job.get("persona_id") != persona_id:
+                continue
+                
+            # Filter by status
+            if status and job.get("status") != status:
+                continue
+                
+            filtered_jobs.append(job)
+        
+        # Sort by creation date (newest first)
+        filtered_jobs.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+        
+        # Paginate
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        paginated_jobs = filtered_jobs[start_idx:end_idx]
+        
+        # Convert to HistoryItem format
+        history_items = []
+        for job in paginated_jobs:
+            # Get persona name
+            persona = persona_manager.get_persona(job.get("persona_id", ""))
+            persona_name = persona.name if persona else "Unknown"
+            
+            # Extract input text from results or job data
+            input_text = None
+            if job.get("results", {}).get("input_text"):
+                input_text = job["results"]["input_text"]
+            elif job.get("input_text"):
+                input_text = job["input_text"]
+            
+            history_item = HistoryItem(
+                job_id=job.get("id", ""),
+                created_at=job.get("created_at", ""),
+                status=job.get("status", ""),
+                persona_id=job.get("persona_id", ""),
+                persona_name=persona_name,
+                input_text=input_text,
+                input_file=job.get("input_file"),
+                context=job.get("context"),
+                results=job.get("results"),
+                error=job.get("error"),
+                step=job.get("step")
+            )
+            history_items.append(history_item)
+        
+        return HistoryResponse(
+            items=history_items,
+            total=len(filtered_jobs),
+            page=page,
+            per_page=per_page
+        )
+        
+    except Exception as e:
+        logger.error(f"Error retrieving history: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve history: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
