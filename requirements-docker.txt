@@ -1,19 +1,32 @@
-numpy<2
-openai>=1.99.2
-elevenlabs>=1.0.0
-requests>=2.31.0
-python-dotenv>=1.0.0
-pydub>=0.25.1
-ffmpeg-python>=0.2.0
-pyannote.audio>=3.0.0
-simple-diarizer==0.0.13
-torch>=2.0.0
-moviepy>=1.0.3
-aiohttp>=3.9.0
-asyncio-throttle>=1.0.2
+# Core web framework
 fastapi>=0.104.0
 uvicorn[standard]>=0.24.0
 python-multipart>=0.0.6
 uvloop>=0.19.0
 httptools>=0.6.0
+
+# API clients
+openai>=1.99.2
+elevenlabs>=1.0.0
+requests>=2.31.0
+aiohttp>=3.9.0
+
+# Environment and utilities
+python-dotenv>=1.0.0
+asyncio-throttle>=1.0.2
+
+# Data storage
 redis>=4.0.0
+
+# Audio processing (minimal)
+pydub>=0.25.1
+ffmpeg-python>=0.2.0
+
+# Video processing (minimal)
+moviepy>=1.0.3
+
+# Optional: Only include if actually used
+# numpy<2  # Remove if not needed for core functionality
+# torch>=2.0.0  # Remove if not doing local ML inference
+# pyannote.audio>=3.0.0  # Remove if not doing speaker diarization
+# simple-diarizer==0.0.13  # Remove if not doing speaker diarization
