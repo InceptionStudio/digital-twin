@@ -11,6 +11,7 @@ from gpt_generator import HotTakeGenerator
 from voice_generator import VoiceGenerator
 from video_generator import VideoGenerator
 from persona_manager import persona_manager
+from s3_storage import S3Storage
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -28,6 +29,9 @@ class ChadWorkflow:
             self.hot_take_generator = HotTakeGenerator()
             self.voice_generator = VoiceGenerator()
             self.video_generator = VideoGenerator()
+            
+            # Initialize S3 storage
+            self.s3_storage = S3Storage()
             
             logger.info("Digital Twin Workflow initialized successfully")
             
@@ -112,6 +116,31 @@ class ChadWorkflow:
             )
             results["video_path"] = video_path
             logger.info(f"Video generated: {video_path}")
+            
+            # Step 5: Upload files to S3 with permanent public URLs
+            logger.info("Step 5: Uploading files to S3 with permanent public URLs...")
+            try:
+                # Upload audio file to S3 with permanent URL
+                audio_s3_key = f"audio/{output_filename}.mp3"
+                audio_url = self.upload_file_to_s3(audio_path, audio_s3_key, "audio/mpeg")
+                results["audio_url"] = audio_url
+                
+                # Upload video file to S3 with permanent URL
+                video_s3_key = f"videos/{output_filename}.mp4"
+                video_url = self.upload_file_to_s3(video_path, video_s3_key, "video/mp4")
+                results["video_url"] = video_url
+                
+                # Keep local paths for reference but prioritize S3 URLs
+                results["audio_path"] = audio_path
+                results["video_path"] = video_path
+                
+                logger.info(f"Files uploaded to S3 with permanent URLs: audio={audio_url}, video={video_url}")
+                
+            except Exception as e:
+                logger.error(f"Failed to upload files to S3: {e}")
+                # Use local paths as fallback
+                results["audio_url"] = audio_path
+                results["video_url"] = video_path
             
             # Final results
             results["status"] = "completed"
@@ -224,6 +253,25 @@ class ChadWorkflow:
                 )
                 results["video_path"] = video_path
                 logger.info(f"Video generated: {video_path}")
+                
+                # Upload files to S3
+                logger.info("Uploading files to S3...")
+                try:
+                    # Upload audio file to S3
+                    audio_s3_key = f"audio/{output_filename}.mp3"
+                    audio_s3_url = self.upload_file_to_s3(audio_path, audio_s3_key, "audio/mpeg")
+                    results["audio_s3_url"] = audio_s3_url
+                    
+                    # Upload video file to S3
+                    video_s3_key = f"videos/{output_filename}.mp4"
+                    video_s3_url = self.upload_file_to_s3(video_path, video_s3_key, "video/mp4")
+                    results["video_s3_url"] = video_s3_url
+                    
+                    logger.info(f"Files uploaded to S3: audio={audio_s3_url}, video={video_s3_url}")
+                    
+                except Exception as e:
+                    logger.error(f"Failed to upload files to S3: {e}")
+                    # Continue without S3 upload if it fails
             
             # Final results
             results["status"] = "completed"
@@ -298,6 +346,20 @@ class ChadWorkflow:
             results["video_path"] = video_path
             results["voice_id"] = voice_id or "default"
             logger.info(f"Video generated with HeyGen voice: {video_path}")
+            
+            # Upload video to S3 with permanent public URL
+            logger.info("Uploading video to S3 with permanent public URL...")
+            try:
+                video_s3_key = f"videos/{output_filename}.mp4"
+                video_url = self.upload_file_to_s3(video_path, video_s3_key, "video/mp4")
+                results["video_url"] = video_url
+                results["video_path"] = video_path
+                logger.info(f"Video uploaded to S3 with permanent URL: {video_url}")
+                
+            except Exception as e:
+                logger.error(f"Failed to upload video to S3: {e}")
+                # Use local path as fallback
+                results["video_url"] = video_path
             
             # Calculate total processing time
             total_time = time.time() - start_time
@@ -376,6 +438,19 @@ class ChadWorkflow:
                 results["video_path"] = video_path
                 results["voice_id"] = target_voice_id or "default"
                 logger.info(f"Video generated with HeyGen voice: {video_path}")
+                
+                # Upload video to S3
+                logger.info("Uploading video to S3...")
+                try:
+                    video_s3_key = f"videos/{output_filename}.mp4"
+                    video_s3_url = self.upload_file_to_s3(video_path, video_s3_key, "video/mp4")
+                    results["video_s3_url"] = video_s3_url
+                    logger.info(f"Video uploaded to S3: {video_s3_url}")
+                    
+                except Exception as e:
+                    logger.error(f"Failed to upload video to S3: {e}")
+                    # Continue without S3 upload if it fails
+                    
             else:
                 # Use ElevenLabs voice
                 results["voice_provider"] = "elevenlabs"
@@ -401,6 +476,27 @@ class ChadWorkflow:
                 )
                 results["video_path"] = video_path
                 logger.info(f"Video generated: {video_path}")
+                
+                # Upload files to S3 with permanent public URLs
+                logger.info("Uploading files to S3 with permanent public URLs...")
+                try:
+                    # Upload audio file to S3 with permanent URL
+                    audio_s3_key = f"audio/{output_filename}.mp3"
+                    audio_url = self.upload_file_to_s3(audio_path, audio_s3_key, "audio/mpeg")
+                    results["audio_url"] = audio_url
+                    
+                    # Upload video file to S3 with permanent URL
+                    video_s3_key = f"videos/{output_filename}.mp4"
+                    video_url = self.upload_file_to_s3(video_path, video_s3_key, "video/mp4")
+                    results["video_url"] = video_url
+                    
+                    logger.info(f"Files uploaded to S3 with permanent URLs: audio={audio_url}, video={video_url}")
+                    
+                except Exception as e:
+                    logger.error(f"Failed to upload files to S3: {e}")
+                    # Use local paths as fallback
+                    results["audio_url"] = audio_path
+                    results["video_url"] = video_path
             
             # Final results
             results["status"] = "completed"
@@ -447,6 +543,76 @@ class ChadWorkflow:
             logger.error(f"HeyGen test failed: {str(e)}")
         
         return results
+    
+    def upload_file_to_s3(self, local_path: str, s3_key: str, content_type: Optional[str] = None) -> str:
+        """
+        Upload a file to S3 and return a permanent public URL for direct access.
+        
+        Args:
+            local_path: Local path to the file
+            s3_key: S3 object key (path in bucket)
+            content_type: Optional content type for the file
+            
+        Returns:
+            Permanent S3 URL for direct file access
+        """
+        try:
+            if not os.path.exists(local_path):
+                logger.warning(f"Local file not found: {local_path}")
+                return local_path
+            
+            # Ensure we have the correct content type for our file types
+            if not content_type:
+                content_type = self._get_content_type_for_file(local_path, s3_key)
+            
+            # Upload file to S3 with public read access and proper MIME type
+            s3_url = self.s3_storage.upload_file(local_path, s3_key, content_type)
+            logger.info(f"File uploaded to S3 with permanent URL and content type '{content_type}': {local_path} -> {s3_url}")
+            return s3_url
+            
+        except Exception as e:
+            logger.error(f"Failed to upload file to S3: {local_path} -> {s3_key}: {e}")
+            # Return local path as fallback
+            return local_path
+    
+    def _get_content_type_for_file(self, local_path: str, s3_key: str) -> str:
+        """
+        Get the appropriate content type for our specific file types.
+        
+        Args:
+            local_path: Local file path
+            s3_key: S3 object key
+            
+        Returns:
+            MIME type string
+        """
+        # Determine content type based on file extension
+        file_ext = os.path.splitext(s3_key.lower())[1]
+        
+        content_types = {
+            '.mp3': 'audio/mpeg',
+            '.mp4': 'video/mp4',
+            '.wav': 'audio/wav',
+            '.m4a': 'audio/mp4',
+            '.aac': 'audio/aac',
+            '.ogg': 'audio/ogg',
+            '.webm': 'video/webm',
+            '.avi': 'video/x-msvideo',
+            '.mov': 'video/quicktime',
+            '.mkv': 'video/x-matroska',
+            '.flv': 'video/x-flv',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.png': 'image/png',
+            '.gif': 'image/gif',
+            '.webp': 'image/webp',
+            '.svg': 'image/svg+xml',
+            '.pdf': 'application/pdf',
+            '.txt': 'text/plain',
+            '.json': 'application/json'
+        }
+        
+        return content_types.get(file_ext, 'application/octet-stream')
     
     def cleanup_files(self):
         """Clean up temporary and old output files."""

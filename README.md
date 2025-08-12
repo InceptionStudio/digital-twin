@@ -41,20 +41,33 @@ pip install -r requirements.txt
 2. **Configure environment variables**:
 Create a `.env` file with your API keys:
 ```bash
-# OpenAI API Configuration
+# API Keys (Required)
 OPENAI_API_KEY=your_openai_api_key_here
-
-# ElevenLabs API Configuration
 ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
-
-# HeyGen API Configuration
 HEYGEN_API_KEY=your_heygen_api_key_here
 
-# Application Configuration (optional)
+# AWS S3 Configuration (Required for file storage)
+AWS_ACCESS_KEY_ID=your_aws_access_key_id_here
+AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key_here
+AWS_REGION=us-east-1
+S3_BUCKET_NAME=digital-twin-storage
+
+# Job Storage Configuration (Optional)
+JOB_STORAGE=redis
+REDIS_URL=redis://redis:6379
+WORKERS=1
+
+# Application Configuration (Optional)
 MAX_FILE_SIZE_MB=50
 TEMP_DIR=./temp
 OUTPUT_DIR=./output
 ```
+
+**S3 Setup Requirements:**
+- Create an S3 bucket named `digital-twin-storage` (or update `S3_BUCKET_NAME`)
+- Configure the bucket for public read access
+- Ensure your AWS credentials have S3 read/write permissions
+- For production, consider using IAM roles instead of explicit keys
 
 ## Usage
 

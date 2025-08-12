@@ -995,53 +995,98 @@ async def get_service_info():
                 "available": False
             }
         
+        # Add S3 storage information
+        try:
+            if workflow and hasattr(workflow, 's3_storage'):
+                s3_storage = workflow.s3_storage
+                info["s3_storage"] = {
+                    "bucket": s3_storage.bucket_name,
+                    "available": True
+                }
+                
+                # Test S3 connection by listing a few files
+                try:
+                    files = s3_storage.list_files(prefix="", max_keys=5)
+                    info["s3_storage"]["file_count"] = len(files)
+                    info["s3_storage"]["connected"] = True
+                except Exception as e:
+                    info["s3_storage"]["connected"] = False
+                    info["s3_storage"]["error"] = str(e)
+                    
+            else:
+                info["s3_storage"] = {
+                    "available": False,
+                    "error": "S3 storage not initialized"
+                }
+        except Exception as e:
+            info["s3_storage"] = {
+                "available": False,
+                "error": str(e)
+            }
+        
         return info
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/download/{filename}")
 async def download_file(filename: str):
-    """Download a generated file."""
-    file_path = Config.OUTPUT_DIR / filename
+    """Download a generated file from S3."""
+    if not workflow or not hasattr(workflow, 's3_storage'):
+        raise HTTPException(status_code=500, detail="S3 storage not available")
     
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="File not found")
-    
-    # Determine media type
-    if filename.endswith('.mp4'):
-        media_type = "video/mp4"
-    elif filename.endswith('.mp3'):
-        media_type = "audio/mpeg"
-    else:
-        media_type = "application/octet-stream"
-    
-    return FileResponse(
-        path=str(file_path),
-        media_type=media_type,
-        filename=filename
-    )
+    try:
+        # Try to find the file in S3
+        s3_key = None
+        if filename.endswith('.mp3'):
+            s3_key = f"audio/{filename}"
+        elif filename.endswith('.mp4'):
+            s3_key = f"videos/{filename}"
+        else:
+            raise HTTPException(status_code=404, detail="File type not supported")
+        
+        # Check if file exists in S3
+        if not workflow.s3_storage.file_exists(s3_key):
+            raise HTTPException(status_code=404, detail="File not found in S3")
+        
+        # Generate a presigned URL for download (1 hour expiration)
+        download_url = workflow.s3_storage.get_file_url(s3_key, expires_in=3600)
+        
+        # Redirect to S3 URL
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=download_url)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to access file: {str(e)}")
 
 @app.get("/stream/{filename}")
 async def stream_file(filename: str):
-    """Stream a video/audio file for playback."""
-    file_path = Config.OUTPUT_DIR / filename
+    """Stream a video/audio file for playback from S3."""
+    if not workflow or not hasattr(workflow, 's3_storage'):
+        raise HTTPException(status_code=500, detail="S3 storage not available")
     
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="File not found")
-    
-    # Determine media type
-    if filename.endswith('.mp4'):
-        media_type = "video/mp4"
-    elif filename.endswith('.mp3'):
-        media_type = "audio/mpeg"
-    else:
-        media_type = "application/octet-stream"
-    
-    return FileResponse(
-        path=str(file_path),
-        media_type=media_type
-        # No filename parameter = no download, browser will play it
-    )
+    try:
+        # Try to find the file in S3
+        s3_key = None
+        if filename.endswith('.mp3'):
+            s3_key = f"audio/{filename}"
+        elif filename.endswith('.mp4'):
+            s3_key = f"videos/{filename}"
+        else:
+            raise HTTPException(status_code=404, detail="File type not supported")
+        
+        # Check if file exists in S3
+        if not workflow.s3_storage.file_exists(s3_key):
+            raise HTTPException(status_code=404, detail="File not found in S3")
+        
+        # Generate a presigned URL for streaming (1 hour expiration)
+        stream_url = workflow.s3_storage.get_file_url(s3_key, expires_in=3600)
+        
+        # Redirect to S3 URL
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=stream_url)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to access file: {str(e)}")
 
 @app.post("/cleanup")
 async def cleanup_files():

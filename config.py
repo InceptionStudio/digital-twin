@@ -24,6 +24,10 @@ class Config:
     TEMP_DIR = Path(os.getenv("TEMP_DIR", "./temp"))
     OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", "./output"))
     
+    # S3 Settings
+    S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "digital-twin-storage")
+    AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+    
     # Create directories if they don't exist
     TEMP_DIR.mkdir(exist_ok=True)
     OUTPUT_DIR.mkdir(exist_ok=True)
