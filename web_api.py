@@ -1012,6 +1012,11 @@ async def health_check():
         "available_personas": len(persona_manager.list_personas())
     }
 
+@app.get("/healthz")
+async def healthz():
+    """Simple health check endpoint for container orchestration."""
+    return {"status": "ok"}
+
 @app.get("/history", response_model=HistoryResponse)
 async def get_history(
     page: int = Query(1, ge=1, description="Page number"),
