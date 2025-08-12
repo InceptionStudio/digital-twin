@@ -27,6 +27,8 @@ services:
       - .:/app
       # Exclude cache directories
       - /app/__pycache__
+      # Persistent storage for generated files
+      - output_data:/app/output
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
@@ -51,3 +53,4 @@ services:
 
 volumes:
   redis_data:
+  output_data:
