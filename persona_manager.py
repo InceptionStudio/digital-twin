@@ -175,7 +175,6 @@ class PersonaManager:
                 "has_elevenlabs": persona.elevenlabs_voice_id is not None,
                 "has_heygen_voice": persona.heygen_voice_id is not None,
                 "has_heygen_avatar": persona.heygen_avatar_id is not None,
-                # Frontend-specific fields
                 "nickname": persona.nickname or persona.name.split(' ')[0],
                 "color_a": persona.color_a or "#00c2ff",
                 "color_b": persona.color_b or "#0b1220"
