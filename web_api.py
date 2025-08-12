@@ -215,6 +215,31 @@ async def get_persona(persona_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/personas/{persona_id}/image")
+async def get_persona_image(persona_id: str):
+    """Get the avatar image for a specific persona."""
+    try:
+        persona = persona_manager.get_persona(persona_id)
+        if not persona:
+            raise HTTPException(status_code=404, detail="Persona not found")
+        
+        if not persona.image_file:
+            raise HTTPException(status_code=404, detail="Persona has no image")
+        
+        image_path = Path(persona.image_file)
+        if not image_path.exists():
+            raise HTTPException(status_code=404, detail="Persona image file not found")
+        
+        return FileResponse(
+            path=image_path,
+            media_type="image/jpeg",
+            filename=f"{persona_id}.jpg"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/heygen-voices")
 async def list_heygen_voices():
     """List available HeyGen voices."""
