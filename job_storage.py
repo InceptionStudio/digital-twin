@@ -7,7 +7,7 @@ import json
 import uuid
 from typing import Dict, Any, Optional
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ class InMemoryJobStorage(JobStorage):
         job_id = str(uuid.uuid4())
         job_data.update({
             "id": job_id,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
             "status": "pending"
         })
         self.jobs[job_id] = job_data
@@ -59,7 +59,7 @@ class InMemoryJobStorage(JobStorage):
             return False
         
         self.jobs[job_id].update(updates)
-        self.jobs[job_id]["updated_at"] = datetime.utcnow().isoformat()
+        self.jobs[job_id]["updated_at"] = datetime.now(timezone.utc).isoformat()
         logger.info(f"Updated job {job_id}: {updates}")
         return True
     
@@ -71,11 +71,18 @@ class InMemoryJobStorage(JobStorage):
         return False
     
     def cleanup_old_jobs(self, max_age_hours: int = 24) -> int:
-        cutoff = datetime.utcnow() - timedelta(hours=max_age_hours)
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=max_age_hours)
         deleted_count = 0
         
         for job_id, job_data in list(self.jobs.items()):
-            created_at = datetime.fromisoformat(job_data.get("created_at", "1970-01-01T00:00:00"))
+            created_at_str = job_data.get("created_at", "1970-01-01T00:00:00+00:00")
+            # Handle both timezone-aware and timezone-naive timestamps
+            try:
+                created_at = datetime.fromisoformat(created_at_str.replace('Z', '+00:00'))
+            except ValueError:
+                # Fallback for timezone-naive timestamps
+                created_at = datetime.fromisoformat(created_at_str).replace(tzinfo=timezone.utc)
+            
             status = job_data.get("status", "unknown")
             
             if created_at < cutoff and status in ["completed", "failed", "cancelled"]:
@@ -104,7 +111,7 @@ class RedisJobStorage(JobStorage):
         job_id = str(uuid.uuid4())
         job_data.update({
             "id": job_id,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
             "status": "pending"
         })
         
@@ -133,7 +140,7 @@ class RedisJobStorage(JobStorage):
             return False
         
         job_data.update(updates)
-        job_data["updated_at"] = datetime.utcnow().isoformat()
+        job_data["updated_at"] = datetime.now(timezone.utc).isoformat()
         
         # Update in Redis
         self.redis.setex(
@@ -155,7 +162,7 @@ class RedisJobStorage(JobStorage):
         return False
     
     def cleanup_old_jobs(self, max_age_hours: int = 24) -> int:
-        cutoff = datetime.utcnow() - timedelta(hours=max_age_hours)
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=max_age_hours)
         deleted_count = 0
         
         # Get all active job IDs
@@ -166,7 +173,14 @@ class RedisJobStorage(JobStorage):
             if not job_data:
                 continue
             
-            created_at = datetime.fromisoformat(job_data.get("created_at", "1970-01-01T00:00:00"))
+            created_at_str = job_data.get("created_at", "1970-01-01T00:00:00+00:00")
+            # Handle both timezone-aware and timezone-naive timestamps
+            try:
+                created_at = datetime.fromisoformat(created_at_str.replace('Z', '+00:00'))
+            except ValueError:
+                # Fallback for timezone-naive timestamps
+                created_at = datetime.fromisoformat(created_at_str).replace(tzinfo=timezone.utc)
+            
             status = job_data.get("status", "unknown")
             
             if created_at < cutoff and status in ["completed", "failed", "cancelled"]:
