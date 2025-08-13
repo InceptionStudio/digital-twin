@@ -14,7 +14,7 @@ import uuid
 import asyncio
 from pathlib import Path
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from chad_workflow import ChadWorkflow
 from config import Config
@@ -1357,11 +1357,18 @@ async def get_history(
         
         # Filter jobs based on criteria
         filtered_jobs = []
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
         
         for job in all_jobs:
             # Filter by date
-            created_at = datetime.fromisoformat(job.get("created_at", "1970-01-01T00:00:00"))
+            created_at_str = job.get("created_at", "1970-01-01T00:00:00+00:00")
+            # Handle both timezone-aware and timezone-naive timestamps
+            try:
+                created_at = datetime.fromisoformat(created_at_str.replace('Z', '+00:00'))
+            except ValueError:
+                # Fallback for timezone-naive timestamps
+                created_at = datetime.fromisoformat(created_at_str).replace(tzinfo=timezone.utc)
+            
             if created_at < cutoff_date:
                 continue
                 
