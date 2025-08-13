@@ -14,6 +14,7 @@ import sys
 import json
 import logging
 import re
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 import argparse
@@ -103,7 +104,9 @@ def parse_video_filename(filename: str) -> Tuple[Optional[str], Optional[datetim
             timestamp_ms = int(match.group(1))
             # Convert milliseconds to datetime with UTC timezone
             timestamp = datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
-            return str(timestamp_ms), timestamp, persona_id
+            # Generate a proper GUID instead of using timestamp as job_id
+            job_id = str(uuid.uuid4())
+            return job_id, timestamp, persona_id
     
     # Pattern 8: {persona_name}_{job_id}_{timestamp}
     # First, get all persona names to match against
