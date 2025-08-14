@@ -116,9 +116,8 @@ class RedisJobStorage(JobStorage):
         })
         
         # Store job data
-        self.redis.setex(
+        self.redis.set(
             f"job:{job_id}",
-            timedelta(hours=24),  # TTL
             json.dumps(job_data)
         )
         
@@ -143,9 +142,8 @@ class RedisJobStorage(JobStorage):
         job_data["updated_at"] = datetime.now(timezone.utc).isoformat()
         
         # Update in Redis
-        self.redis.setex(
+        self.redis.set(
             f"job:{job_id}",
-            timedelta(hours=24),
             json.dumps(job_data)
         )
         

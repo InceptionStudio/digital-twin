@@ -199,9 +199,8 @@ def create_job_from_s3_video(job_storage, s3_key: str, file_info: Dict,
         
         # Create the job with the correct ID directly in Redis to avoid overwriting our data
         job_data["id"] = job_id
-        job_storage.redis.setex(
+        job_storage.redis.set(
             f"job:{job_id}",
-            timedelta(hours=24),
             json.dumps(job_data)
         )
         job_storage.redis.sadd("jobs:active", job_id)
