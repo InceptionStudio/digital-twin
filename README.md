@@ -342,15 +342,22 @@ python cli.py --test
 python persona_cli.py validate chad_goldstein
 ```
 
-**Redis/Job Storage Issues**:
-- Multiple workers require Redis: `JOB_STORAGE=redis REDIS_URL=redis://redis:6379`
+**Job Storage Issues**:
+- Multiple workers require Redis or Firestore: `JOB_STORAGE=redis` or `JOB_STORAGE=firestore`
 - Redis is only supported via docker-compose:
   ```bash
   # Start Redis and API together
   docker-compose up
   ```
-- Job storage errors: Check Redis logs and connection settings
-- Ensure Redis service is healthy in docker-compose
+- Firestore requires Google Cloud credentials:
+  ```bash
+  # Set environment variables
+  export FIRESTORE_PROJECT_ID="your-project-id"
+  export FIRESTORE_COLLECTION="jobs"  # optional, defaults to "jobs"
+  export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account-key.json"
+  ```
+- Job storage errors: Check Redis/Firestore logs and connection settings
+- Ensure Redis service is healthy in docker-compose or Firestore credentials are valid
 
 **Cleanup Old Files**:
 ```bash
@@ -377,11 +384,52 @@ docker-compose up
 # Option 2: Single worker with in-memory storage (development only)
 python start_server.py
 
-# Option 3: Manual configuration (requires Redis)
+# Option 3: Manual configuration with Redis
 JOB_STORAGE=redis REDIS_URL=redis://redis:6379 uvicorn web_api:app --host 0.0.0.0 --port 8000 --workers 4
+
+# Option 4: Manual configuration with Firestore (persistent storage)
+JOB_STORAGE=firestore FIRESTORE_PROJECT_ID="your-project-id" uvicorn web_api:app --host 0.0.0.0 --port 8000 --workers 4
 ```
 
-**⚠️ Important**: Multiple workers require Redis for job storage. Redis is only supported via docker-compose. In-memory storage is only allowed with single worker.
+**⚠️ Important**: Multiple workers require Redis or Firestore for job storage. In-memory storage is only allowed with single worker.
+
+## Firestore Migration
+
+To migrate from Redis to Firestore for persistent job storage:
+
+1. **Set up Google Cloud credentials**:
+   ```bash
+   # Download service account key from Google Cloud Console
+   export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account-key.json"
+   export FIRESTORE_PROJECT_ID="your-project-id"
+   ```
+
+2. **Test the migration (dry run)**:
+   ```bash
+   python migrate_redis_to_firestore.py --dry-run --firestore-project-id="your-project-id"
+   ```
+
+3. **Perform the migration**:
+   ```bash
+   python migrate_redis_to_firestore.py --firestore-project-id="your-project-id"
+   ```
+
+4. **Optional: Delete Redis jobs after migration**:
+   ```bash
+   python migrate_redis_to_firestore.py --firestore-project-id="your-project-id" --delete-after
+   ```
+
+5. **Update your environment**:
+   ```bash
+   export JOB_STORAGE=firestore
+   export FIRESTORE_PROJECT_ID="your-project-id"
+   ```
+
+**Benefits of Firestore**:
+- Persistent storage (jobs don't disappear on restart)
+- Automatic scaling
+- No TTL expiration issues
+- Better for production workloads
 
 **Add example personas**:
 ```bash

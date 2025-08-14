@@ -27,18 +27,29 @@ def start_server():
     print(f"👥 Workers: {workers}")
     print(f"💻 CPU Cores: {cpu_count}")
     
-    # Safety check: Ensure Redis is used when workers > 1
+    # Safety check: Ensure Redis or Firestore is used when workers > 1
     if workers > 1:
         job_storage = os.getenv("JOB_STORAGE", "memory")
         if job_storage == "memory":
             print("❌ ERROR: Cannot use in-memory job storage with multiple workers!")
-            print("   Set JOB_STORAGE=redis and ensure Redis is running via docker-compose.")
-            print("   Example: docker-compose up")
+            print("   Set JOB_STORAGE=redis or JOB_STORAGE=firestore and ensure the service is running.")
+            print("   Example: docker-compose up (for Redis)")
+            print("   Example: Set FIRESTORE_PROJECT_ID for Firestore")
             exit(1)
         
-        redis_url = os.getenv("REDIS_URL", "redis://redis:6379")
-        print(f"🔗 Using Redis for job storage: {redis_url}")
-        print("   Ensure Redis is running via docker-compose: docker-compose up")
+        if job_storage == "redis":
+            redis_url = os.getenv("REDIS_URL", "redis://redis:6379")
+            print(f"🔗 Using Redis for job storage: {redis_url}")
+            print("   Ensure Redis is running via docker-compose: docker-compose up")
+        elif job_storage == "firestore":
+            firestore_project_id = os.getenv("FIRESTORE_PROJECT_ID")
+            firestore_collection = os.getenv("FIRESTORE_COLLECTION", "jobs")
+            print(f"🔥 Using Firestore for job storage: {firestore_project_id}/{firestore_collection}")
+            print("   Ensure Google Cloud credentials are properly configured")
+        else:
+            print(f"❌ ERROR: Unknown job storage type: {job_storage}")
+            print("   Supported types: memory, redis, firestore")
+            exit(1)
     
     # Start uvicorn with production settings
     uvicorn.run(

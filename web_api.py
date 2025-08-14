@@ -19,7 +19,7 @@ from datetime import datetime, timedelta, timezone
 from chad_workflow import ChadWorkflow
 from config import Config
 from persona_manager import persona_manager
-from job_storage import create_job_storage, RedisJobStorage
+from job_storage import create_job_storage, RedisJobStorage, FirestoreJobStorage
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -133,11 +133,19 @@ async def startup_event():
         # Initialize job storage
         storage_type = os.getenv("JOB_STORAGE", "memory")
         redis_url = os.getenv("REDIS_URL", "redis://redis:6379")
+        firestore_project_id = os.getenv("FIRESTORE_PROJECT_ID")
+        firestore_collection = os.getenv("FIRESTORE_COLLECTION", "jobs")
         
         # Get worker count from environment or default to 1
         workers = int(os.getenv("WORKERS", "1"))
         
-        job_storage = create_job_storage(storage_type, redis_url, workers)
+        job_storage = create_job_storage(
+            storage_type, 
+            redis_url, 
+            firestore_project_id,
+            firestore_collection,
+            workers
+        )
         
         workflow = ChadWorkflow()
         logger.info("Digital Twin Workflow initialized successfully")
@@ -1187,18 +1195,42 @@ async def get_service_info():
                             "total_commands_processed": redis_info.get("total_commands_processed", 0)
                         }
                         
-                        # Get job count
-                        if hasattr(job_storage, 'redis') and hasattr(job_storage.redis, 'smembers'):
-                            active_jobs = job_storage.redis.smembers("jobs:active")
-                            info["job_storage"]["active_jobs_count"] = len(active_jobs)
-                        
                     except Exception as e:
                         info["job_storage"]["redis_connected"] = False
                         info["job_storage"]["redis_error"] = str(e)
                 
-                # Add memory storage information
-                elif hasattr(job_storage, 'jobs'):
-                    info["job_storage"]["active_jobs_count"] = len(job_storage.jobs)
+                # Get job count using the list_jobs method
+                try:
+                    all_jobs = job_storage.list_jobs(limit=1000)
+                    info["job_storage"]["active_jobs_count"] = len(all_jobs)
+                except Exception as e:
+                    info["job_storage"]["active_jobs_count"] = 0
+                    info["job_storage"]["error"] = str(e)
+                
+                # Add Firestore-specific information
+                if isinstance(job_storage, FirestoreJobStorage):
+                    try:
+                        info["job_storage"]["firestore_info"] = {
+                            "project_id": job_storage.db.project,
+                            "collection": job_storage.collection.id,
+                            "database_id": job_storage.db._database,
+                            "credentials_type": "base64" if hasattr(job_storage, 'db') and hasattr(job_storage.db, '_credentials') else "default"
+                        }
+                        
+                        # Test Firestore connection by getting collection info
+                        try:
+                            # Get a sample document to test connection
+                            sample_docs = list(job_storage.collection.limit(1).stream())
+                            info["job_storage"]["firestore_info"]["connected"] = True
+                            info["job_storage"]["firestore_info"]["sample_docs_available"] = len(sample_docs) > 0
+                        except Exception as e:
+                            info["job_storage"]["firestore_info"]["connected"] = False
+                            info["job_storage"]["firestore_info"]["connection_error"] = str(e)
+                            
+                    except Exception as e:
+                        info["job_storage"]["firestore_info"] = {
+                            "error": str(e)
+                        }
                 
             except Exception as e:
                 info["job_storage"] = {
@@ -1341,21 +1373,10 @@ async def get_history(
 ):
     """Get history of past queries and results."""
     try:
-        # Get all jobs from storage
-        all_jobs = []
+        # Get jobs from storage with status filter for efficiency
+        all_jobs = job_storage.list_jobs(status=status, limit=1000)
         
-        if isinstance(job_storage, RedisJobStorage):
-            # For Redis, we need to get all job IDs first
-            job_ids = job_storage.redis.smembers("jobs:active")
-            for job_id in job_ids:
-                job_data = job_storage.get_job(job_id)
-                if job_data:
-                    all_jobs.append(job_data)
-        else:
-            # For in-memory storage, get all jobs
-            all_jobs = list(job_storage.jobs.values())
-        
-        # Filter jobs based on criteria
+        # Filter jobs based on remaining criteria
         filtered_jobs = []
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
         
@@ -1374,10 +1395,6 @@ async def get_history(
                 
             # Filter by persona
             if persona_id and job.get("persona_id") != persona_id:
-                continue
-                
-            # Filter by status
-            if status and job.get("status") != status:
                 continue
                 
             filtered_jobs.append(job)
