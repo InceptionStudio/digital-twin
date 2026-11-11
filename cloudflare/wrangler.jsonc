@@ -4,9 +4,7 @@
 // built from the repo's Dockerfile. Data stays where it is today: job records
 // in Firestore, generated media in S3 — nothing is stored in the container.
 //
-// One-time setup (secrets persist across deploys). Use the same values the
-// Fly app has today; for the last three, read them with
-//   flyctl ssh console -a digital-twin-backend -C "printenv FIRESTORE_PROJECT_ID S3_BUCKET_NAME AWS_REGION"
+// One-time setup (secrets persist across deploys):
 //
 //   cd cloudflare && npm install
 //   npx wrangler secret put FIRESTORE_PROJECT_ID
@@ -31,10 +29,9 @@
   // Non-secret settings, passed through to the container by src/index.ts.
   "vars": {
     "JOB_STORAGE": "firestore",
-    // Production value from Fly's baked-in .env (code default is 50).
+    // Code default is 50.
     "MAX_FILE_SIZE_MB": "500",
-    // Production job history, shared with the Fly app during cutover.
-    // Use "jobs_staging" for throwaway test deploys.
+    // Production job history. Use "jobs_staging" for throwaway test deploys.
     "FIRESTORE_COLLECTION": "jobs"
   },
 
@@ -44,9 +41,9 @@
       "image": "../Dockerfile",
       "image_build_context": "..",
       // 1/2 vCPU, 4 GiB RAM, 8 GB disk. ffmpeg/moviepy work needs more than
-      // "basic" (1/4 vCPU, 1 GiB). Fly ran 1 shared vCPU / 1 GB.
+      // "basic" (1/4 vCPU, 1 GiB).
       "instance_type": "standard-1",
-      // One instance, like the single Fly machine today.
+      // One instance: jobs run in-process, so every request must reach it.
       "max_instances": 1
     }
   ],

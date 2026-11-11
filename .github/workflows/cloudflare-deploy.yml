@@ -1,6 +1,6 @@
 # Deploys the backend to Cloudflare (Worker + Container).
 #
-# Runs on every push to main (replaces the old Fly deploy) and on demand.
+# Runs on every push to main and on demand.
 # A deploy restarts the container, which kills any job still in progress.
 #
 # Needs repo secrets CLOUDFLARE_API_TOKEN (Workers Scripts:Edit +

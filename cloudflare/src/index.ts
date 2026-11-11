@@ -8,7 +8,7 @@ interface Env {
   MAX_FILE_SIZE_MB: string;
   FIRESTORE_COLLECTION: string;
 
-  // secrets (wrangler secret put) — copy the values from the Fly app
+  // secrets (wrangler secret put)
   FIRESTORE_PROJECT_ID: string;
   S3_BUCKET_NAME: string;
   AWS_REGION: string;
