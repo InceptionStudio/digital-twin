@@ -237,7 +237,7 @@ class FirestoreJobStorage(JobStorage):
             from google.cloud.firestore import FieldFilter
             from google.oauth2 import service_account
             
-            # Check for base64-encoded credentials from Fly.io secrets
+            # Check for base64-encoded credentials from the platform's secret store
             credentials_json_b64 = os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON')
             
             if credentials_json_b64:
@@ -250,7 +250,7 @@ class FirestoreJobStorage(JobStorage):
                 
                 # Initialize Firestore client with credentials
                 self.db = firestore.Client(project=project_id, credentials=credentials)
-                logger.info("Using base64-encoded Google credentials from Fly.io secrets")
+                logger.info("Using base64-encoded Google credentials from GOOGLE_APPLICATION_CREDENTIALS_JSON")
             else:
                 # Fallback to default credentials (for local development)
                 self.db = firestore.Client(project=project_id)

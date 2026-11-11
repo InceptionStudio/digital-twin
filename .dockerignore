@@ -1,5 +1,5 @@
 # Secrets: never bake API keys into the image. In production they come from
-# the platform's secret store (Fly secrets / wrangler secret put).
+# the platform's secret store (wrangler secret put).
 .env
 .env.*
 !.env.example
