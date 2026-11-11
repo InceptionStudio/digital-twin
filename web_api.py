@@ -1369,7 +1369,7 @@ async def get_history(
     per_page: int = Query(20, ge=1, le=100, description="Items per page"),
     persona_id: Optional[str] = Query(None, description="Filter by persona ID"),
     status: Optional[str] = Query(None, description="Filter by status (completed, failed, pending)"),
-    days: Optional[int] = Query(7, ge=1, le=365, description="Number of days to look back")
+    days: Optional[int] = Query(7, ge=1, le=3650, description="Number of days to look back")
 ):
     """Get history of past queries and results."""
     try:
