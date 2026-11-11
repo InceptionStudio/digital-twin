@@ -1,3 +1,13 @@
+# Secrets: never bake API keys into the image. In production they come from
+# the platform's secret store (Fly secrets / wrangler secret put).
+.env
+.env.*
+!.env.example
+secrets/
+
+# Cloudflare Worker wrapper (deployed separately, not part of the image)
+cloudflare/
+
 # Development files
 __pycache__/
 *.pyc

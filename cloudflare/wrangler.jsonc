@@ -1,0 +1,59 @@
+// Cloudflare deployment for the digital-twin FastAPI backend.
+//
+// A small Worker (src/index.ts) proxies every request to a single container
+// built from the repo's Dockerfile. Data stays where it is today: job records
+// in Firestore, generated media in S3 — nothing is stored in the container.
+//
+// One-time setup (secrets persist across deploys). Use the same values the
+// Fly app has today; for the last three, read them with
+//   flyctl ssh console -a digital-twin-backend -C "printenv FIRESTORE_PROJECT_ID S3_BUCKET_NAME AWS_REGION"
+//
+//   cd cloudflare && npm install
+//   npx wrangler secret put FIRESTORE_PROJECT_ID
+//   npx wrangler secret put S3_BUCKET_NAME
+//   npx wrangler secret put AWS_REGION
+//   npx wrangler secret put OPENAI_API_KEY
+//   npx wrangler secret put ELEVENLABS_API_KEY
+//   npx wrangler secret put HEYGEN_API_KEY
+//   npx wrangler secret put AWS_ACCESS_KEY_ID
+//   npx wrangler secret put AWS_SECRET_ACCESS_KEY
+//   npx wrangler secret put GOOGLE_APPLICATION_CREDENTIALS_JSON
+//   (optional) npx wrangler secret put ELEVENLABS_API_TOKEN
+//
+// Deploy: npx wrangler deploy   (needs Docker running locally)
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "digital-twin-backend",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "observability": { "enabled": true },
+
+  // Non-secret settings, passed through to the container by src/index.ts.
+  "vars": {
+    "JOB_STORAGE": "firestore",
+    // Production value from Fly's baked-in .env (code default is 50).
+    "MAX_FILE_SIZE_MB": "500",
+    // Production job history, shared with the Fly app during cutover.
+    // Use "jobs_staging" for throwaway test deploys.
+    "FIRESTORE_COLLECTION": "jobs"
+  },
+
+  "containers": [
+    {
+      "class_name": "Backend",
+      "image": "../Dockerfile",
+      "image_build_context": "..",
+      // 1/2 vCPU, 4 GiB RAM, 8 GB disk. ffmpeg/moviepy work needs more than
+      // "basic" (1/4 vCPU, 1 GiB). Fly ran 1 shared vCPU / 1 GB.
+      "instance_type": "standard-1",
+      // One instance, like the single Fly machine today.
+      "max_instances": 1
+    }
+  ],
+
+  "durable_objects": {
+    "bindings": [{ "name": "BACKEND", "class_name": "Backend" }]
+  },
+
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Backend"] }]
+}
